@@ -1,0 +1,29 @@
+{
+  "secret": "lendloop-test-secret-0123456789abcdef0123456789",
+  "cases": [
+    {
+      "name": "POST reminder write-back",
+      "timestamp": "1793620800",
+      "method": "POST",
+      "path": "/n8n/reminders",
+      "body": "{\"loanId\":\"k17abc\",\"status\":\"sent\"}",
+      "signature": "0df85a9aa9008683e9aa4731a17aef5b7c70e9e07463930574a0932ce0a92817"
+    },
+    {
+      "name": "GET overdue loans (empty body)",
+      "timestamp": "1793620801",
+      "method": "GET",
+      "path": "/n8n/overdue-loans",
+      "body": "",
+      "signature": "b9abcee182986506d51ddb6909941c6895a2b2a4a8c37a6da069ec5c48f53d26"
+    },
+    {
+      "name": "Unicode body",
+      "timestamp": "1793620802",
+      "method": "POST",
+      "path": "/webhook/lendloop-loan-events",
+      "body": "{\"tool\":{\"name\":\"Taladro ñandú\"}}",
+      "signature": "e9a0ed6797aae4795e00f5e009140014379e7911e6e593c4b32e692240d1fb4c"
+    }
+  ]
+}
