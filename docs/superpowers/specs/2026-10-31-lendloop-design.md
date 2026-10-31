@@ -540,3 +540,6 @@ Clerk production instance with an owned domain; a secret manager with scheduled 
 
 - SMTP provider for the demo (Resend with an owned domain, or a Gmail app password).
 - Value of `APP_TIMEZONE` / `GENERIC_TIMEZONE` for the demo.
+- **Must fix (Plan 4): zero-downtime rotation of the Convex→n8n secret.** The n8n webhook currently verifies against one secret only, so between `pnpm setup:local --rotate` and the n8n restart, events are rejected (and go `dead`). Add a second Crypto credential for `LENDLOOP_N8N_WEBHOOK_SECRET_PREVIOUS` (defaulting to the current secret when not rotating) and accept either HMAC in `Verify signature`, matching §7.2.
+- **Must fix (Plan 4): stale workflows stay active.** The entrypoint imports and publishes the workflows in the image but never unpublishes workflows that are no longer shipped. Unpublish any workflow whose ID is not in the image before `n8n start`.
+- **Decide (Plan 4): n8n dedupe history is capped at 10,000 event IDs** (Remove Duplicates `historySize`); when it fills, new notifications error. For the demo this is ample; the production note must state the fix (move dedupe into Convex with a signed claim endpoint, or periodic `clearDeduplicationHistory` plus a larger window).
