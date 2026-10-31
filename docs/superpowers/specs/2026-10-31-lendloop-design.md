@@ -418,7 +418,7 @@ Direction: **B · Ledger** (reference mockup `design/directions.html`, tab B).
 ### System
 
 - Tokens in OKLCH → Tailwind v4 `@theme` + shadcn CSS variables; shadcn components are always customized, never shipped in default state.
-- Light and **dark mode** (near-black cool neutral, lightened cobalt); follows `prefers-color-scheme` with a manual toggle.
+- Single light theme (user decision 2026-10-31: no dark mode). Every text/colour pair passes WCAG AA on the light surfaces.
 - Type: IBM Plex Sans (display 600 with −0.04em tracking; UI 400/500) and IBM Plex Mono (IDs, dates, counts, `kbd`), loaded via `next/font`.
 - Radii: buttons 8, cards 10, badges 6. 1 px hairlines; shadows only on popovers and dialogs.
 - Accent: cobalt, button fill tuned to pass WCAG AA with white text. One accent, used everywhere.
@@ -465,7 +465,7 @@ Easings: `--ease-out: cubic-bezier(0.23, 1, 0.32, 1)`, `--ease-in-out: cubic-bez
 
 ### Accessibility
 
-WCAG AA contrast in both themes; instant 2 px cobalt focus ring; keyboard-navigable calendar with per-day `aria-label` ("Nov 18, unavailable"); heading levels never skip; axe checks in E2E.
+WCAG AA contrast; instant 2 px cobalt focus ring; keyboard-navigable calendar with per-day `aria-label` ("Nov 18, unavailable"); heading levels never skip; axe checks in E2E.
 
 ## 10. Testing
 
