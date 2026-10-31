@@ -8,10 +8,13 @@
  * @module
  */
 
+import type * as automation_outbox from "../automation/outbox.js";
+import type * as lib_audit from "../lib/audit.js";
 import type * as lib_config from "../lib/config.js";
 import type * as lib_displayName from "../lib/displayName.js";
 import type * as lib_errors from "../lib/errors.js";
 import type * as lib_functions from "../lib/functions.js";
+import type * as lib_loanTransitions from "../lib/loanTransitions.js";
 import type * as lib_validators from "../lib/validators.js";
 import type * as model_dates from "../model/dates.js";
 import type * as model_loanMachine from "../model/loanMachine.js";
@@ -25,10 +28,13 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "automation/outbox": typeof automation_outbox;
+  "lib/audit": typeof lib_audit;
   "lib/config": typeof lib_config;
   "lib/displayName": typeof lib_displayName;
   "lib/errors": typeof lib_errors;
   "lib/functions": typeof lib_functions;
+  "lib/loanTransitions": typeof lib_loanTransitions;
   "lib/validators": typeof lib_validators;
   "model/dates": typeof model_dates;
   "model/loanMachine": typeof model_loanMachine;
@@ -62,4 +68,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
+};

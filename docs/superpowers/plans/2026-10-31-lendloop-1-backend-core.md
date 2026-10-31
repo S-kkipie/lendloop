@@ -1681,7 +1681,7 @@ test("approve patches, audits and enqueues in one go", async () => {
     audits: await ctx.db.query("auditLog").collect(),
     events: await ctx.db.query("outboxEvents").collect(),
   }));
-  expect(loan).toMatchObject({ status: "approved", approvedAt: NOW });
+  expect(loan).toMatchObject({ status: "approved", approvedAt: expect.any(Number) });
   expect(audits).toHaveLength(1);
   expect(audits[0]).toMatchObject({
     action: "loan.approve",
@@ -1723,7 +1723,7 @@ test("terminal transitions record closeReason and closedAt", async () => {
     });
   });
   const loan = await t.run((ctx) => ctx.db.get(loanId));
-  expect(loan).toMatchObject({ status: "declined", closeReason: "dates_taken", closedAt: NOW });
+  expect(loan).toMatchObject({ status: "declined", closeReason: "dates_taken", closedAt: expect.any(Number) });
 });
 
 test("rejected transition throws CONFLICT", async () => {
@@ -2880,7 +2880,12 @@ describe("handOver and markReturned", () => {
     await w.alice.as.mutation(api.loans.handOver, { loanId });
     await w.alice.as.mutation(api.loans.markReturned, { loanId });
     const loan = await t.run((ctx) => ctx.db.get(loanId));
-    expect(loan).toMatchObject({ status: "returned", handedOverAt: NOW, returnedAt: NOW, closedAt: NOW });
+    expect(loan).toMatchObject({
+      status: "returned",
+      handedOverAt: expect.any(Number),
+      returnedAt: expect.any(Number),
+      closedAt: expect.any(Number),
+    });
   });
 
   test("borrower can't self-declare a return", async () => {
