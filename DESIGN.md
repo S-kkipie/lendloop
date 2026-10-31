@@ -82,6 +82,18 @@ table above passes WCAG AA (checked with a script against the CSS file).
 - Icons: Phosphor only (`@phosphor-icons/react`), regular weight, `fill` for
   status glyphs (seal, check), `bold` inside small badges. No emoji, no lucide.
 
+## Shell (`components/shell`)
+
+- Desktop (lg and up): 240 px rail on paper with a hairline; wordmark, Search
+  (`⌘K` / `Ctrl K` hint), "List a tool" (`N`), nav, then the user row (Clerk
+  avatar, own display name and email). Active link: ink text, surface 2 fill
+  and a 2 px cobalt inset bar; `aria-current="page"`. Incoming carries a mono
+  count chip of pending requests.
+- Below lg: sticky top bar (menu, wordmark, search, avatar); the same rail
+  content opens in a left Sheet. Key hints hide on coarse pointers.
+- Pages render inside `main` (max-w-6xl, 16/24/40 px gutters); they own their
+  `h1`. Wrap data views in skeletons shaped like the final layout.
+
 ## Motion (Emil Kowalski rules)
 
 - Easings: `--ease-out: cubic-bezier(0.23, 1, 0.32, 1)`,
@@ -100,7 +112,9 @@ table above passes WCAG AA (checked with a script against the CSS file).
   `hover:` variant is redefined in globals.css).
 - Reduced motion keeps opacity and drops movement; skeleton pulse stops.
 - Focus ring: 2 px `--ring` outline, offset 2 px (1 px on fields, inset on menu
-  items), appears instantly, never transitioned.
+  items), appears instantly, never transitioned. Tailwind v4's
+  `transition-colors` includes `outline-color`, so use
+  `transition-[color,background-color,border-color]` on focusable elements.
 
 ## Copy
 
