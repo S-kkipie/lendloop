@@ -1,0 +1,43 @@
+{
+  "name": "lendloop",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "run-p dev:next dev:convex",
+    "dev:next": "next dev",
+    "dev:convex": "convex dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "next typegen && tsc --noEmit -p . && tsc --noEmit -p convex",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "convex:push": "convex dev --once",
+    "docs:authz": "tsx scripts/authz-matrix.ts"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^7.9.22",
+    "@convex-dev/rate-limiter": "0.4.3",
+    "convex": "~1.49.0",
+    "convex-helpers": "0.1.133",
+    "next": "16.4.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "convex-test": "0.0.66",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.3",
+    "npm-run-all2": "^9.0.4",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.0.5"
+  },
+  "packageManager": "pnpm@12.16.1"
+}
