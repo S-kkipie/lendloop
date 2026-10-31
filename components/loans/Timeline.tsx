@@ -3,9 +3,8 @@
 import type { Icon } from "@phosphor-icons/react";
 import { ArrowRightIcon, BellRingingIcon, EnvelopeSimpleIcon, PencilSimpleLineIcon } from "@phosphor-icons/react";
 import { cn } from "cn";
-import { useEffect, useState, type ReactNode } from "react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { formatTimestamp, relativeTime } from "@/lib/format";
+import type { ReactNode } from "react";
+import { RelativeTime, useNow } from "@/components/shell/RelativeTime";
 import { loanStatusView, type LoanStatus } from "@/lib/loanStatus";
 import {
   isShownAsAutomation,
@@ -32,38 +31,6 @@ interface TimelineProps {
   nextStep: NextStep;
   loan: { startDate: string; endDate: string; overdue: boolean; message?: string };
   context: TimelineContext;
-}
-
-/** "now", ticking every 30 s so "just now" becomes "1 min ago" without a reload. */
-function useNow(intervalMs = 30_000): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(timer);
-  }, [intervalMs]);
-  return now;
-}
-
-/** Relative time, with the exact time (mono) on hover or focus. */
-function When({ at, now }: { at: number; now: number }) {
-  const exact = formatTimestamp(at);
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <time
-            dateTime={new Date(at).toISOString()}
-            tabIndex={0}
-            className="w-fit rounded-sm font-mono text-xs text-muted-foreground underline decoration-dotted decoration-1 underline-offset-[3px] hover:text-foreground"
-          />
-        }
-      >
-        {relativeTime(at, now)}
-        <span className="sr-only">, {exact}</span>
-      </TooltipTrigger>
-      <TooltipContent className="font-mono">{exact}</TooltipContent>
-    </Tooltip>
-  );
 }
 
 type Marker = { kind: "status"; icon: Icon } | { kind: "automation"; icon: Icon } | { kind: "next" };
@@ -175,7 +142,7 @@ export function Timeline({ entries, nextStep, loan, context }: TimelineProps) {
       {keyed.map(({ entry, key }, index) => {
         const last = index === keyed.length - 1;
         const rail = last ? (next ? "dashed" : "none") : "solid";
-        const meta = <When at={entry.at} now={now} />;
+        const meta = <RelativeTime at={entry.at} now={now} />;
         const common = { rail, meta, arriving: arrivals.isArriving(key), onArrived: () => arrivals.settle(key) } as const;
 
         if (entry.kind === "status") {

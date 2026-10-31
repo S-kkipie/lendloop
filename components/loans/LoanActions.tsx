@@ -71,7 +71,7 @@ function plural(count: number, word: string): string {
  * Upcoming). Keep keyboard users in place: focus the next row's first action,
  * else the previous row's, else the list's panel.
  */
-function keepFocusNear(origin: HTMLElement | null) {
+export function keepFocusNear(origin: HTMLElement | null) {
   const row = origin?.closest<HTMLElement>("[data-loan-row]");
   if (!row) return;
   const candidates = [row.nextElementSibling, row.previousElementSibling].filter(

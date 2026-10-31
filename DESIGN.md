@@ -121,6 +121,20 @@ table above passes WCAG AA (checked with a script against the CSS file).
   expected step closes the rail as a dashed entry ("Marta confirms the
   handover"). Copy lives in `lib/timeline.ts` (tested). When the status changes
   live, the header badge fades in through a 2 px blur (`status-swap`, 180 ms).
+- Admin console (`/admin`, `components/admin`): stat tiles are one framed strip
+  split by 1 px gaps (5 across from lg, 2 below); each tile is a link to the tab
+  that explains it, its number counts up once (NumberTicker) and only turns
+  danger ink when something waits on an admin (overdue loans, dead letters
+  nobody replayed, a stale or missing heartbeat). No charts, no gradients.
+  Records use `LedgerList semantics="table"` (ARIA table, rows, column headers,
+  `LedgerCell` cells): a dense table from xl, stacked rows below, where the
+  first cell carries the secondary facts and the others hide. A row whose
+  record has a page uses a stretched name link (the whole row is the hit area
+  and wears the focus ring); other controls sit above it. Times are
+  `RelativeTime` (focusable in short lists, out of the tab order in long
+  tables). State lives in the URL (`?tab=`, `?status=`, `?overdue=1`,
+  `?entity=&id=`). A second replay of the same notification asks first (each
+  replay is a new event that n8n does not dedupe).
 - Empty states (`components/shell/EmptyState`): dashed frame, small icon, why
   it is empty, and the action that fills it.
 - Icons: Phosphor only (`@phosphor-icons/react`), regular weight, `fill` for

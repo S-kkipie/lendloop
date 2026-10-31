@@ -65,6 +65,35 @@ test("replay creates a new pending event linked to the original; only for dead o
   await expectCode(w.dana.as.mutation(api.admin.replayEvent, { eventId: sentId }), "CONFLICT");
 });
 
+test("health marks problems that were already replayed, and replays that failed again", async () => {
+  const t = setupTest();
+  const w = await seedWorld(t);
+  const deadId = await t.run((ctx) =>
+    ctx.db.insert("outboxEvents", {
+      type: "loan.requested",
+      schemaVersion: 1,
+      recipientId: w.alice.id,
+      status: "dead",
+      attempts: 5,
+      lastError: "n8n responded 503",
+    }),
+  );
+  const before = await w.dana.as.query(api.admin.automationHealth, {});
+  expect(before.problems).toMatchObject([{ _id: deadId, replayedAt: null }]);
+
+  const replayId = await w.dana.as.mutation(api.admin.replayEvent, { eventId: deadId });
+  const after = await w.dana.as.query(api.admin.automationHealth, {});
+  // The replay is pending, so it is not a problem; the original is marked.
+  expect(after.problems).toHaveLength(1);
+  expect(after.problems[0]).toMatchObject({ _id: deadId, status: "dead" });
+  expect(after.problems[0].replayedAt).toBeGreaterThanOrEqual(NOW);
+  expect(after.problems[0].replayOf).toBeUndefined();
+
+  await t.run((ctx) => ctx.db.patch(replayId, { status: "failed", lastError: "SMTP 451" }));
+  const failedAgain = await w.dana.as.query(api.admin.automationHealth, {});
+  expect(failedAgain.problems.find((p) => p._id === replayId)).toMatchObject({ replayOf: deadId, replayedAt: null });
+});
+
 test("resolving an error hides it from the health view", async () => {
   const t = setupTest();
   const w = await seedWorld(t);

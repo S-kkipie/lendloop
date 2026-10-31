@@ -1,5 +1,14 @@
 import { cn } from "cn";
-import type { AnimationEvent, ComponentProps, ReactNode } from "react";
+import { createContext, use, type AnimationEvent, type ComponentProps, type ReactNode } from "react";
+
+/**
+ * "list" (default): rows are list items and the column heads are decoration.
+ * "table": the same layout exposed as an ARIA table (rows, column headers,
+ * cells), for dense records like the admin console. Every direct child of a
+ * table row must then be a LedgerCell.
+ */
+type Semantics = "list" | "table";
+const SemanticsContext = createContext<Semantics>("list");
 
 interface LedgerListProps {
   /** Accessible name of the list ("Requests waiting for you"). */
@@ -13,6 +22,9 @@ interface LedgerListProps {
   columns: string;
   children: ReactNode;
   className?: string;
+  semantics?: Semantics;
+  /** The last column holds actions and aligns right (default); false for a text column. */
+  endAligned?: boolean;
 }
 
 /**
@@ -20,31 +32,39 @@ interface LedgerListProps {
  * stacked card-row; from xl up the rows share one grid (subgrid) and read as a
  * table with mono column heads on surface 2.
  */
-export function LedgerList({ label, heads, columns, children, className }: LedgerListProps) {
+export function LedgerList({ label, heads, columns, children, className, semantics = "list", endAligned = true }: LedgerListProps) {
+  const table = semantics === "table";
   return (
-    <div
-      role="list"
-      aria-label={label}
-      data-loan-list=""
-      tabIndex={-1}
-      className={cn(
-        "grid grid-cols-1 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card focus-visible:outline-offset-2 xl:gap-x-6",
-        columns,
-        className,
-      )}
-    >
+    <SemanticsContext value={semantics}>
       <div
-        aria-hidden="true"
-        className="hidden h-9 items-center bg-muted px-4 font-mono text-[0.6875rem] font-medium tracking-[0.02em] text-muted-foreground xl:col-span-full xl:grid xl:grid-cols-subgrid"
+        role={table ? "table" : "list"}
+        aria-label={label}
+        data-loan-list=""
+        tabIndex={-1}
+        className={cn(
+          "grid grid-cols-1 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card focus-visible:outline-offset-2 xl:gap-x-6",
+          columns,
+          className,
+        )}
       >
-        {heads.map((head, index) => (
-          <span key={index} className={cn("whitespace-nowrap", index === heads.length - 1 && index > 0 && "text-right")}>
-            {head}
-          </span>
-        ))}
+        <div
+          aria-hidden={table ? undefined : "true"}
+          role={table ? "row" : undefined}
+          className="hidden h-9 items-center bg-muted px-4 font-mono text-[0.6875rem] font-medium tracking-[0.02em] text-muted-foreground xl:col-span-full xl:grid xl:grid-cols-subgrid"
+        >
+          {heads.map((head, index) => (
+            <span
+              key={index}
+              role={table ? "columnheader" : undefined}
+              className={cn("whitespace-nowrap", endAligned && index === heads.length - 1 && index > 0 && "text-right")}
+            >
+              {head}
+            </span>
+          ))}
+        </div>
+        {children}
       </div>
-      {children}
-    </div>
+    </SemanticsContext>
   );
 }
 
@@ -56,9 +76,10 @@ interface LedgerRowProps extends ComponentProps<"div"> {
 
 /** One row of a LedgerList. Two columns when stacked; the list's columns from xl up. */
 export function LedgerRow({ arriving, onArrived, className, children, ...props }: LedgerRowProps) {
+  const semantics = use(SemanticsContext);
   return (
     <div
-      role="listitem"
+      role={semantics === "table" ? "row" : "listitem"}
       data-loan-row=""
       className={cn(
         "grid grid-cols-[minmax(0,1fr)_auto] content-start gap-x-3 px-4 py-3.5 xl:col-span-full xl:grid-cols-subgrid xl:gap-x-6",
@@ -73,4 +94,10 @@ export function LedgerRow({ arriving, onArrived, className, children, ...props }
       {children}
     </div>
   );
+}
+
+/** A cell of a table-semantics LedgerList row (a plain div in a list). */
+export function LedgerCell({ className, ...props }: ComponentProps<"div">) {
+  const semantics = use(SemanticsContext);
+  return <div role={semantics === "table" ? "cell" : undefined} className={cn("min-w-0", className)} {...props} />;
 }

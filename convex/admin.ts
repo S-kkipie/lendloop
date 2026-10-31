@@ -168,15 +168,31 @@ export const automationHealth = adminQuery({
         .order("desc")
         .take(25);
       problems.push(
-        ...rows.map((e) => ({
-          _id: e._id,
-          type: e.type,
-          status: e.status,
-          attempts: e.attempts,
-          lastError: e.lastError,
-          loanId: e.loanId,
-          at: e._creationTime,
-        })),
+        ...(await Promise.all(
+          rows.map(async (e) => {
+            // A replay is a new event, so the original stays dead or failed.
+            // The admin panel needs to know it was already replayed: each
+            // replay has a new ID that n8n does not dedupe, so replaying
+            // twice sends the email twice.
+            const lastReplay = await ctx.db
+              .query("auditLog")
+              .withIndex("by_entity", (q) => q.eq("entityType", "outboxEvent").eq("entityId", e._id))
+              .order("desc")
+              .filter((q) => q.eq(q.field("action"), "outboxEvent.replay"))
+              .first();
+            return {
+              _id: e._id,
+              type: e.type,
+              status: e.status,
+              attempts: e.attempts,
+              lastError: e.lastError,
+              loanId: e.loanId,
+              at: e._creationTime,
+              replayOf: e.replayOf,
+              replayedAt: lastReplay?.at ?? null,
+            };
+          }),
+        )),
       );
     }
     const errors = (
