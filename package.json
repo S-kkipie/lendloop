@@ -21,13 +21,24 @@
     "e2e:automation": "tsx scripts/e2e-automation.ts"
   },
   "dependencies": {
+    "@base-ui/react": "^1.9.0",
     "@clerk/nextjs": "^7.9.22",
     "@convex-dev/rate-limiter": "0.4.3",
+    "@paper-design/shaders-react": "0.0.82",
+    "@phosphor-icons/react": "^2.1.10",
+    "class-variance-authority": "^0.7.1",
+    "cmdk": "^1.1.1",
+    "cn": "^0.5.1",
     "convex": "~1.49.0",
     "convex-helpers": "0.1.133",
+    "date-fns": "^4.4.0",
+    "motion": "^14.9.0",
     "next": "16.4.3",
     "react": "19.3.0",
+    "react-day-picker": "^10.0.2",
     "react-dom": "19.3.0",
+    "shadcn": "^4.23.0",
+    "sonner": "^2.0.8",
     "svix": "~2.9.1"
   },
   "devDependencies": {

@@ -1,26 +1,329 @@
-@import "tailwindcss";
+/* Hallmark · genre: modern-minimal · direction: B Ledger · theme: custom (cobalt on cool paper)
+ * type: IBM Plex Sans + IBM Plex Mono · accent hue: cool (263) · radii 8/10/6 · hairlines, shadows on overlays only
+ * Single light theme (user decision 2026-10-31). Source of truth for every colour,
+ * radius, shadow and motion token. See DESIGN.md.
+ */
+@layer theme, base, clerk, components, utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@import "tailwindcss";
+@import "shadcn/tailwind.css";
+
+/* Hover styles only where a real pointer can hover (no sticky hover on touch). */
+@custom-variant hover {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      @slot;
+    }
+  }
+}
+
+/* Emitted as runtime variables (used directly in CSS below and by Clerk/Sonner). */
+@theme static {
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
+  --font-heading: var(--font-sans);
+  --tracking-display: -0.04em;
+  --tracking-title: -0.01em;
+
+  /* Radii: badge 6 (md), button and input 8 (lg), card and overlays 10 (xl). */
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-ink: var(--primary-ink);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--danger-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-skeleton: var(--skeleton);
+  --color-backdrop: var(--backdrop);
+
+  --color-neutral-soft: var(--neutral-soft);
+  --color-neutral-ink: var(--neutral-ink);
+  --color-info-soft: var(--info-soft);
+  --color-info-ink: var(--info-ink);
+  --color-ok-soft: var(--ok-soft);
+  --color-ok-ink: var(--ok-ink);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-ink: var(--warn-ink);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-ink: var(--danger-ink);
+
+  --shadow-pop: var(--elevation-pop);
+  --shadow-dialog: var(--elevation-dialog);
+  --shadow-thumb: var(--elevation-thumb);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* Ledger · light (the only theme). Cool paper, ink, one cobalt accent. */
+  --paper: oklch(99.3% 0.002 260);
+  --surface: oklch(100% 0 0);
+  --surface-2: oklch(97.6% 0.004 260);
+  --ink: oklch(19% 0.012 262);
+  --ink-muted: oklch(51% 0.012 262);
+  --hairline: oklch(91.5% 0.005 262);
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: oklch(46% 0.19 263);
+  --primary-foreground: oklch(99% 0 0);
+  --primary-hover: oklch(41% 0.18 263);
+  --primary-soft: oklch(95% 0.03 263);
+  --primary-ink: oklch(44% 0.18 263);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--ink-muted);
+  /* shadcn "accent" is the hover and highlight surface, not the brand colour. */
+  --accent: oklch(95.6% 0.006 262);
+  --accent-foreground: var(--ink);
+  --border: var(--hairline);
+  --input: oklch(85% 0.006 262);
+  --ring: oklch(50% 0.19 263);
+
+  --neutral-soft: oklch(95% 0.004 262);
+  --neutral-ink: oklch(36% 0.012 262);
+  --info-soft: oklch(95% 0.04 200);
+  --info-ink: oklch(42% 0.08 210);
+  --ok-soft: oklch(95% 0.04 155);
+  --ok-ink: oklch(40% 0.09 155);
+  --warn-soft: oklch(95.5% 0.05 85);
+  --warn-ink: oklch(45% 0.1 70);
+  --danger: oklch(56% 0.19 25);
+  --danger-foreground: oklch(99% 0 0);
+  --danger-hover: oklch(51% 0.19 25);
+  --danger-soft: oklch(95.5% 0.03 25);
+  --danger-ink: oklch(48% 0.17 25);
+
+  --skeleton: oklch(94.5% 0.005 262);
+  --backdrop: oklch(19% 0.012 262 / 0.28);
+  --selection: oklch(88% 0.07 263);
+  --scrollbar: oklch(84% 0.006 262);
+  --switch-off: oklch(78% 0.008 262);
+  --switch-thumb: oklch(100% 0 0);
+  --elevation-pop: 0 1px 2px oklch(19% 0.012 262 / 0.06), 0 8px 24px -8px oklch(19% 0.012 262 / 0.18);
+  --elevation-dialog: 0 2px 4px oklch(19% 0.012 262 / 0.06), 0 24px 48px -12px oklch(19% 0.012 262 / 0.24);
+  --elevation-thumb: 0 1px 2px oklch(19% 0.012 262 / 0.24);
+
+  /* Motion. Nothing in the app runs longer than 300 ms. */
+  --dur-row: 120ms;
+  --dur-press: 140ms;
+  --dur-pop: 160ms;
+  --dur-exit: 120ms;
+  --dur-dialog: 200ms;
+  --dur-sheet: 240ms;
+
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    @apply font-sans;
+    color-scheme: light;
+    overflow-x: clip;
+    -webkit-text-size-adjust: 100%;
+    scrollbar-color: var(--scrollbar) transparent;
+  }
+  body {
+    @apply bg-background text-foreground;
+    overflow-x: clip;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  ::selection {
+    background-color: var(--selection);
+    color: var(--foreground);
+  }
+  input,
+  textarea {
+    caret-color: var(--primary);
+  }
+  a {
+    text-underline-offset: 3px;
+  }
+  /* Instant focus ring: 2 px, never transitioned. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  .font-mono,
+  kbd,
+  code,
+  time {
+    font-variant-numeric: tabular-nums;
+  }
+  kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0.1875rem 0.3125rem;
+    border-radius: var(--radius-xs);
+    font: 500 0.6875rem/1 var(--font-mono);
+    color: var(--muted-foreground);
+    background-color: var(--surface-2);
+    box-shadow: inset 0 0 0 1px var(--border);
+    white-space: nowrap;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Motion primitives. Base UI exposes data-starting-style / data-ending-style
+ * and --transform-origin, so overlays use interruptible CSS transitions. */
+@layer components {
+  .motion-press {
+    transition:
+      transform var(--dur-press) var(--ease-out),
+      background-color var(--dur-row) var(--ease-out),
+      color var(--dur-row) var(--ease-out),
+      border-color var(--dur-row) var(--ease-out);
+  }
+  .motion-press:active:not(:disabled, [aria-disabled="true"], [data-disabled]) {
+    transform: scale(0.97);
+  }
+
+  /* Popovers, menus, selects, tooltips: scale from the trigger. */
+  .motion-pop {
+    transform-origin: var(--transform-origin);
+    transition:
+      opacity var(--dur-pop) var(--ease-out),
+      transform var(--dur-pop) var(--ease-out);
+  }
+  .motion-pop[data-starting-style],
+  .motion-pop[data-ending-style] {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  .motion-pop[data-ending-style] {
+    transition-duration: var(--dur-exit);
+  }
+  .motion-pop[data-instant] {
+    transition-duration: 0ms;
+  }
+
+  /* Dialogs are not anchored: they scale from the centre. */
+  .motion-dialog {
+    transition:
+      opacity var(--dur-dialog) var(--ease-out),
+      transform var(--dur-dialog) var(--ease-out);
+  }
+  .motion-dialog[data-starting-style],
+  .motion-dialog[data-ending-style] {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  .motion-dialog[data-ending-style] {
+    transition-duration: 150ms;
+  }
+
+  .motion-fade {
+    transition: opacity var(--dur-dialog) var(--ease-out);
+  }
+  .motion-fade[data-starting-style],
+  .motion-fade[data-ending-style] {
+    opacity: 0;
+  }
+
+  .motion-sheet {
+    transition: transform var(--dur-sheet) var(--ease-out);
+  }
+  .motion-sheet[data-ending-style] {
+    transition-duration: 180ms;
+  }
+  .motion-sheet[data-side="left"]:is([data-starting-style], [data-ending-style]) {
+    transform: translateX(-100%);
+  }
+  .motion-sheet[data-side="right"]:is([data-starting-style], [data-ending-style]) {
+    transform: translateX(100%);
+  }
+  .motion-sheet[data-side="top"]:is([data-starting-style], [data-ending-style]) {
+    transform: translateY(-100%);
+  }
+  .motion-sheet[data-side="bottom"]:is([data-starting-style], [data-ending-style]) {
+    transform: translateY(100%);
+  }
+
+  /* Keyboard-first surfaces (command palette) open and close instantly. */
+  .motion-none,
+  .motion-none[data-starting-style],
+  .motion-none[data-ending-style] {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Sonner: keep toasts inside the 300 ms motion budget. */
+[data-sonner-toast] {
+  transition-property: transform, opacity, height, box-shadow;
+  transition-duration: 300ms, 300ms, 300ms, 200ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  /* Keep opacity, drop movement. */
+  .motion-pop:is([data-starting-style], [data-ending-style]),
+  .motion-dialog:is([data-starting-style], [data-ending-style]) {
+    transform: none;
+  }
+  .motion-sheet:is([data-starting-style], [data-ending-style]) {
+    transform: none;
+    opacity: 0;
+  }
+  .motion-sheet {
+    transition: opacity var(--dur-dialog) var(--ease-out);
+  }
+  .motion-press:active:not(:disabled, [aria-disabled="true"], [data-disabled]) {
+    transform: none;
+  }
+  .animate-pulse {
+    animation: none;
+  }
 }
