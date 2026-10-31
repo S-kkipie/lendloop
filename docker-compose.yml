@@ -14,6 +14,8 @@ services:
       retries: 10
   mailpit:
     image: axllent/mailpit:v1.33.0
+    environment:
+      MP_ENABLE_CHAOS: "true" # lets the E2E make SMTP fail on demand (local only)
     ports: ["${MAILPIT_UI_PORT:-8025}:8025"]
   n8n:
     build: ./n8n

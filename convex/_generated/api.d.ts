@@ -40,6 +40,7 @@ import type * as model_delivery from "../model/delivery.js";
 import type * as model_heartbeat from "../model/heartbeat.js";
 import type * as model_loanMachine from "../model/loanMachine.js";
 import type * as model_overlap from "../model/overlap.js";
+import type * as seed from "../seed.js";
 import type * as tools from "../tools.js";
 import type * as users from "../users.js";
 
@@ -82,6 +83,7 @@ declare const fullApi: ApiFromModules<{
   "model/heartbeat": typeof model_heartbeat;
   "model/loanMachine": typeof model_loanMachine;
   "model/overlap": typeof model_overlap;
+  seed: typeof seed;
   tools: typeof tools;
   users: typeof users;
 }>;
