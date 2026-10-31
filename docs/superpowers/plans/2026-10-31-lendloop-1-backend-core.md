@@ -930,7 +930,7 @@ import { convexTest } from "convex-test";
 import { expect, test } from "vitest";
 import schema from "./schema";
 
-const modules = import.meta.glob("./**/!(*.*.*)*.*s");
+const modules = import.meta.glob(["./**/*.*s", "!./**/*.test.ts", "!./**/*.helpers.ts"]);
 
 test("schema accepts a valid tool and rejects an unknown category", async () => {
   const t = convexTest(schema, modules);
@@ -1212,7 +1212,7 @@ import { api } from "./_generated/api";
 import type { ErrorCode } from "./lib/errors";
 import schema from "./schema";
 
-export const modules = import.meta.glob("./**/!(*.*.*)*.*s");
+export const modules = import.meta.glob(["./**/*.*s", "!./**/*.test.ts", "!./**/*.helpers.ts"]);
 
 const issuer = "https://clerk.test";
 const identity = (id: string, name: string, extra: Record<string, unknown> = {}) => ({

@@ -8,13 +8,27 @@
  * @module
  */
 
+import type * as lib_config from "../lib/config.js";
+import type * as lib_errors from "../lib/errors.js";
+import type * as lib_validators from "../lib/validators.js";
+import type * as model_dates from "../model/dates.js";
+import type * as model_loanMachine from "../model/loanMachine.js";
+import type * as model_overlap from "../model/overlap.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  "lib/config": typeof lib_config;
+  "lib/errors": typeof lib_errors;
+  "lib/validators": typeof lib_validators;
+  "model/dates": typeof model_dates;
+  "model/loanMachine": typeof model_loanMachine;
+  "model/overlap": typeof model_overlap;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.
