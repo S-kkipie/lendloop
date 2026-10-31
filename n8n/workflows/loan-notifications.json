@@ -1,0 +1,583 @@
+{
+  "id": "llLoanNotify0001",
+  "name": "loan-notifications",
+  "nodes": [
+    {
+      "id": "82c2e3b0-ed01-5a5a-b7d0-33b135125b3b",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lendloop-loan-events",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "webhookId": "0d4c7a52-7a8e-4c55-9d0b-6f3e1f2a9c11"
+    },
+    {
+      "id": "1e768180-1e61-5fb3-989b-2ae23bf2b676",
+      "name": "Build canonical string",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Canonical string `${ts}.POST.${path}.${rawBody}` (contract §7.2). The path is\n// fixed: it is never taken from the request. Never throws on bad input, so junk\n// requests end in a 401 instead of an error execution.\nconst PATH = '/webhook/lendloop-loan-events';\nconst item = $input.first();\nconst headers = item.json.headers || {};\nlet raw = '';\ntry {\n  raw = (await this.helpers.getBinaryDataBuffer(0, 'data')).toString('utf8');\n} catch (error) {\n  raw = '';\n}\nconst header = (name) => (typeof headers[name] === 'string' ? headers[name] : '');\nconst ts = header('x-lendloop-timestamp');\nconst provided = header('x-lendloop-signature')\n  .split(',')\n  .map((part) => part.trim())\n  .filter((part) => part.startsWith('v1='))\n  .map((part) => part.slice(3))\n  .filter((hex) => /^[0-9a-f]{64}$/.test(hex));\nreturn [\n  {\n    json: {\n      canonical: `${ts}.POST.${PATH}.${raw}`,\n      ts,\n      provided,\n      eventId: header('x-lendloop-event-id'),\n      raw,\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "dade10b9-8e97-5dab-afb2-68d09e0e36db",
+      "name": "Compute HMAC",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.canonical }}",
+        "dataPropertyName": "expected",
+        "encoding": "hex"
+      },
+      "credentials": {
+        "crypto": {
+          "id": "llCryptoInbound01",
+          "name": "LendLoop: Convex→n8n HMAC"
+        }
+      }
+    },
+    {
+      "id": "42500b71-f819-5ed4-8814-68385bb9ba11",
+      "name": "Verify signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Constant-time compare of the expected HMAC (Crypto node) against every\n// provided v1= value, plus the 300-second window. The event ID used for dedupe\n// comes from the signed body and must equal the (unsigned) header.\nconst WINDOW_SECONDS = 300;\nconst { expected, provided, ts, raw, eventId } = $input.first().json;\n\nfunction constantTimeEqual(a, b) {\n  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;\n  let diff = 0;\n  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);\n  return diff === 0;\n}\n\nconst fresh = /^\\d{10}$/.test(String(ts)) && Math.abs(Date.now() / 1000 - Number(ts)) <= WINDOW_SECONDS;\nlet matched = false;\nfor (const candidate of Array.isArray(provided) ? provided : []) {\n  if (constantTimeEqual(String(expected), candidate)) matched = true; // no early exit\n}\n\nlet payload = null;\nif (fresh && matched) {\n  try {\n    payload = JSON.parse(raw);\n  } catch (error) {\n    payload = null;\n  }\n}\nconst valid =\n  payload !== null &&\n  typeof payload === 'object' &&\n  typeof payload.eventId === 'string' &&\n  payload.eventId.length > 0 &&\n  payload.eventId === eventId;\n\nreturn [{ json: valid ? { valid: true, eventId: payload.eventId, payload } : { valid: false } }];\n"
+      }
+    },
+    {
+      "id": "27a1de5f-6d3e-5c71-a913-f723e02bbabd",
+      "name": "Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "97dc5a82-09fd-5100-9d0a-2dfaf272d3d1",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d76d071c-d8c6-5c88-828d-7948689fe5d3",
+      "name": "Respond 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1100,
+        500
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"error\":\"unauthorized\"}",
+        "options": {
+          "responseCode": 401
+        }
+      }
+    },
+    {
+      "id": "aac76eb3-21a4-531b-b24a-b31ead835b45",
+      "name": "Seen before?",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        200
+      ],
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "logic": "removeItemsWithAlreadySeenKeyValues",
+        "dedupeValue": "={{ $json.eventId }}",
+        "options": {
+          "scope": "workflow"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "a254541e-754a-5bd9-bc74-cbf1041e2899",
+      "name": "New event?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7d37a88d-ac5d-5f9d-a311-59775ea1bf9e",
+              "leftValue": "={{ Boolean($json.eventId) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ea23fdd4-c573-5329-ba1e-8e7a60b08d2d",
+      "name": "Respond 200 duplicate",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1540,
+        400
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"duplicate\":true}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "6ee1fc7b-3ee6-5af7-b1d1-6dca48d36d35",
+      "name": "Respond 202",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1540,
+        100
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"accepted\":true}",
+        "options": {
+          "responseCode": 202
+        }
+      }
+    },
+    {
+      "id": "cbb19963-7e3c-58a1-8275-990e23ffb820",
+      "name": "Compose email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        100
+      ],
+      "parameters": {
+        "jsCode": "// Plain-text email for one notification. Uses only the recipient's first name,\n// the counterpart's first name, the tool name, loan dates and the action link.\nconst { eventId, payload } = $input.first().json;\nconst tool = payload.tool.name;\nconst who = payload.counterpartFirstName;\nconst loan = payload.loan;\nconst until = loan ? loan.endDate : 'the agreed date';\n\nconst copy = {\n  'loan.requested': [\n    `${who || 'A neighbour'} wants to borrow your ${tool}`,\n    `${who || 'A neighbour'} would like to borrow your ${tool}. Please approve or decline the request.`,\n  ],\n  'loan.approved': [\n    `Your request for the ${tool} was approved`,\n    `${who || 'The owner'} approved your request to borrow the ${tool}.`,\n  ],\n  'loan.declined': [\n    `Your request for the ${tool} was declined`,\n    `Your request to borrow the ${tool} was declined. You can try other dates or another tool.`,\n  ],\n  'loan.cancelled': [\n    `A booking for the ${tool} was cancelled`,\n    `The booking for the ${tool} was cancelled. Nothing else is needed from you.`,\n  ],\n  'loan.handed_over': [\n    `You have the ${tool} until ${until}`,\n    `You now have the ${tool}. Please return it to ${who || 'the owner'} by ${until}.`,\n  ],\n  'loan.returned': [\n    `The ${tool} was returned`,\n    `The ${tool} was returned and the loan is closed. Thank you for taking good care of it.`,\n  ],\n  'loan.expired': [\n    `A request for the ${tool} expired`,\n    `The request for the ${tool} expired before the loan started, so it is now closed.`,\n  ],\n  'listing.removed': [\n    `Your listing changed: ${tool}`,\n    `The listing for the ${tool} was removed from LendLoop, and any open bookings for it were closed.`,\n  ],\n};\n\nconst entry = copy[payload.type];\nif (!entry) throw new Error(`Unsupported event type: ${String(payload.type).slice(0, 40)}`);\nconst lines = [`Hi ${payload.recipient.firstName},`, '', entry[1]];\nif (loan) lines.push('', `Dates: ${loan.startDate} to ${loan.endDate}`);\nlines.push('', `See the details: ${payload.actionUrl}`, '', 'LendLoop');\n\nreturn [{ json: { eventId, to: payload.recipient.email, subject: entry[0], text: lines.join('\\n') } }];\n"
+      }
+    },
+    {
+      "id": "c1cf4db3-afde-5888-8e8a-2809c6f55984",
+      "name": "Send email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1980,
+        100
+      ],
+      "parameters": {
+        "fromEmail": "{{MAIL_FROM}}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "smtp": {
+          "id": "llSmtp0000000001",
+          "name": "LendLoop SMTP"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "dd362462-a3f9-5e22-a8a5-f2487977140e",
+      "name": "Prepare status write-back",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Signed write-back: the email for this event was sent.\nconst PATH = '/n8n/notifications/status';\nconst { eventId } = $('Compose email').first().json;\nconst body = JSON.stringify({ eventId, status: 'sent', executionId: String($execution.id) });\nconst ts = String(Math.floor(Date.now() / 1000));\nreturn [{ json: { body, ts, canonical: `${ts}.POST.${PATH}.${body}` } }];\n"
+      }
+    },
+    {
+      "id": "d51861b7-f8c1-53c1-8d52-203b8d7cb272",
+      "name": "Sign status write-back",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        0
+      ],
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.canonical }}",
+        "dataPropertyName": "signature",
+        "encoding": "hex"
+      },
+      "credentials": {
+        "crypto": {
+          "id": "llCryptoOutbound1",
+          "name": "LendLoop: n8n→Convex HMAC"
+        }
+      }
+    },
+    {
+      "id": "4baa7f68-fd3d-58cc-98c5-5d69ccfab72d",
+      "name": "POST notification status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "{{CONVEX_SITE_URL}}/n8n/notifications/status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-lendloop-timestamp",
+              "value": "={{ $json.ts }}"
+            },
+            {
+              "name": "x-lendloop-signature",
+              "value": "=v1={{ $json.signature }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "1091050b-dda2-5762-a2a5-f2c1a25c05a0",
+      "name": "Prepare failure report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        260
+      ],
+      "parameters": {
+        "jsCode": "// Send email exhausted its retries: report it with the event ID so Convex marks\n// the outbox event failed (and an admin can replay it). Emails are stripped.\nconst PATH = '/n8n/automation-errors';\nconst { eventId } = $('Compose email').first().json;\nconst error = $input.first().json.error;\nconst detail = typeof error === 'string' ? error : (error && error.message) || 'Email could not be sent';\nconst message = String(detail).replace(/[^\\s@<>\"']+@[^\\s@<>\"']+/g, '[email]').slice(0, 500);\nconst body = JSON.stringify({\n  workflow: $workflow.name,\n  executionId: String($execution.id),\n  node: 'Send email',\n  message,\n  eventId,\n});\nconst ts = String(Math.floor(Date.now() / 1000));\nreturn [{ json: { body, ts, canonical: `${ts}.POST.${PATH}.${body}` } }];\n"
+      }
+    },
+    {
+      "id": "51a84c5a-f7bd-5851-b117-5768fae4aba5",
+      "name": "Sign failure report",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        260
+      ],
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.canonical }}",
+        "dataPropertyName": "signature",
+        "encoding": "hex"
+      },
+      "credentials": {
+        "crypto": {
+          "id": "llCryptoOutbound1",
+          "name": "LendLoop: n8n→Convex HMAC"
+        }
+      }
+    },
+    {
+      "id": "2627b8a3-8f94-5a35-8d6d-3a1842da79d2",
+      "name": "POST automation error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        260
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "{{CONVEX_SITE_URL}}/n8n/automation-errors",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-lendloop-timestamp",
+              "value": "={{ $json.ts }}"
+            },
+            {
+              "name": "x-lendloop-signature",
+              "value": "=v1={{ $json.signature }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Build canonical string",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build canonical string": {
+      "main": [
+        [
+          {
+            "node": "Compute HMAC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute HMAC": {
+      "main": [
+        [
+          {
+            "node": "Verify signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify signature": {
+      "main": [
+        [
+          {
+            "node": "Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid?": {
+      "main": [
+        [
+          {
+            "node": "Seen before?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seen before?": {
+      "main": [
+        [
+          {
+            "node": "New event?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New event?": {
+      "main": [
+        [
+          {
+            "node": "Respond 202",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 200 duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond 202": {
+      "main": [
+        [
+          {
+            "node": "Compose email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose email": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send email": {
+      "main": [
+        [
+          {
+            "node": "Prepare status write-back",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare failure report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare status write-back": {
+      "main": [
+        [
+          {
+            "node": "Sign status write-back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign status write-back": {
+      "main": [
+        [
+          {
+            "node": "POST notification status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare failure report": {
+      "main": [
+        [
+          {
+            "node": "Sign failure report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign failure report": {
+      "main": [
+        [
+          {
+            "node": "POST automation error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "llErrorHandler001"
+  },
+  "pinData": {}
+}
