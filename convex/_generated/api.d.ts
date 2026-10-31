@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as admin from "../admin.js";
 import type * as automation_outbox from "../automation/outbox.js";
 import type * as crons from "../crons.js";
 import type * as lib_audit from "../lib/audit.js";
@@ -34,6 +35,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  admin: typeof admin;
   "automation/outbox": typeof automation_outbox;
   crons: typeof crons;
   "lib/audit": typeof lib_audit;
