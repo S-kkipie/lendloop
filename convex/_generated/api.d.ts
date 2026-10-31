@@ -9,11 +9,14 @@
  */
 
 import type * as lib_config from "../lib/config.js";
+import type * as lib_displayName from "../lib/displayName.js";
 import type * as lib_errors from "../lib/errors.js";
+import type * as lib_functions from "../lib/functions.js";
 import type * as lib_validators from "../lib/validators.js";
 import type * as model_dates from "../model/dates.js";
 import type * as model_loanMachine from "../model/loanMachine.js";
 import type * as model_overlap from "../model/overlap.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -23,11 +26,14 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "lib/config": typeof lib_config;
+  "lib/displayName": typeof lib_displayName;
   "lib/errors": typeof lib_errors;
+  "lib/functions": typeof lib_functions;
   "lib/validators": typeof lib_validators;
   "model/dates": typeof model_dates;
   "model/loanMachine": typeof model_loanMachine;
   "model/overlap": typeof model_overlap;
+  users: typeof users;
 }>;
 
 /**

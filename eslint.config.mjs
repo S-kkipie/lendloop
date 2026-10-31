@@ -14,6 +14,34 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "convex/_generated/**",
   ]),
+  {
+    // Convex functions must be built from the wrappers in convex/lib/functions.ts
+    // so authentication and roles are resolved in one place.
+    files: ["convex/**/*.ts"],
+    ignores: ["convex/lib/functions.ts", "convex/**/*.*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/_generated/server"],
+              importNames: [
+                "query",
+                "mutation",
+                "action",
+                "internalQuery",
+                "internalMutation",
+                "internalAction",
+                "httpAction",
+              ],
+              message: "Build Convex functions with the wrappers in convex/lib/functions.ts.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;
