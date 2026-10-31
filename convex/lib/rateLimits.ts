@@ -1,4 +1,4 @@
-import { DAY, HOUR, RateLimiter } from "@convex-dev/rate-limiter";
+import { DAY, HOUR, MINUTE, RateLimiter } from "@convex-dev/rate-limiter";
 import { components } from "../_generated/api";
 import type { MutationCtx } from "../_generated/server";
 import { appError } from "./errors";
@@ -6,6 +6,8 @@ import { appError } from "./errors";
 export const rateLimiter = new RateLimiter(components.rateLimiter, {
   loanRequest: { kind: "token bucket", rate: 10, period: HOUR, capacity: 10 },
   toolCreate: { kind: "token bucket", rate: 20, period: DAY, capacity: 20 },
+  inboundHttp: { kind: "token bucket", rate: 120, period: MINUTE, capacity: 240 },
+  clerkWebhook: { kind: "token bucket", rate: 60, period: MINUTE, capacity: 120 },
 });
 
 export type LimitName = "loanRequest" | "toolCreate";
