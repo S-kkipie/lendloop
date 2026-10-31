@@ -487,7 +487,7 @@ Typecheck, lint, unit + `convex-test`, workflow lint, gitleaks, `next build`, an
 ### Local
 
 1. `pnpm install`
-2. `pnpm setup`: generates secrets, writes `.env.local` and `n8n/.env` (both gitignored), sets Convex env vars with `npx convex env set`.
+2. `pnpm setup:local` (not `pnpm setup`, which is a pnpm built-in): generates secrets, writes `n8n/.env` (gitignored, mode 0600), sets Convex env vars with `npx convex env set`.
 3. `docker compose up -d`: n8n (our image, workflows and credentials imported and activated), Postgres, Mailpit.
 4. `pnpm dev`: Next.js + Convex local deployment.
 5. `pnpm seed`: fictional neighbours, tools, and one overdue loan.

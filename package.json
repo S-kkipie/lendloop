@@ -13,7 +13,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "convex:push": "convex dev --once",
-    "docs:authz": "tsx scripts/authz-matrix.ts"
+    "docs:authz": "tsx scripts/authz-matrix.ts",
+    "setup:local": "tsx scripts/setup.ts",
+    "stack:up": "docker compose up -d --build",
+    "stack:down": "docker compose down",
+    "seed": "convex run seed:demo",
+    "e2e:automation": "tsx scripts/e2e-automation.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.22",
@@ -31,6 +36,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "bcryptjs": "^3.0.3",
     "convex-test": "0.0.66",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
