@@ -49,10 +49,10 @@ type Health = FunctionReturnType<typeof api.admin.automationHealth>;
 type Problem = Health["problems"][number];
 type AutomationError = Health["errors"][number];
 
-const PROBLEM_HEADS = ["Notification", "Problem", "Tries", "Last error", "When", "Actions"] as const;
+const PROBLEM_HEADS = ["Notification", "Problem", "Tries", "Last error", "Queued", "Actions"] as const;
 const PROBLEM_COLUMNS =
   "xl:grid-cols-[minmax(0,1fr)_max-content_max-content_minmax(0,1fr)_max-content_max-content]";
-const ERROR_HEADS = ["Workflow", "Execution", "Message", "When", "Actions"] as const;
+const ERROR_HEADS = ["Workflow", "Execution", "Message", "Reported", "Actions"] as const;
 const ERROR_COLUMNS = "xl:grid-cols-[max-content_max-content_minmax(0,1fr)_max-content_max-content]";
 
 function ProblemLabel({ problem }: { problem: Problem }) {
@@ -189,7 +189,9 @@ function ProblemRow({
             <span className="font-mono text-xs text-muted-foreground">
               {plural(problem.attempts, "try", "tries")}
             </span>
-            <RelativeTime at={problem.at} now={now} focusable={false} />
+            <span className="text-xs text-muted-foreground">
+              queued <RelativeTime at={problem.at} now={now} focusable={false} />
+            </span>
           </p>
           {error}
           {replayed}
@@ -267,7 +269,9 @@ function ErrorRow({
           <p className="text-[0.8125rem] leading-5 [overflow-wrap:anywhere]">{error.message}</p>
           <p className="flex flex-wrap items-center gap-x-2 font-mono text-xs text-muted-foreground">
             <span className="[overflow-wrap:anywhere]">Execution {error.executionId}</span>
-            <RelativeTime at={error.at} now={now} focusable={false} />
+            <span className="font-sans">
+              reported <RelativeTime at={error.at} now={now} focusable={false} />
+            </span>
           </p>
         </div>
       </LedgerCell>

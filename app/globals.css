@@ -367,6 +367,44 @@
   }
 }
 
+/* Line tabs that don't fit (five admin tabs on a 320 px phone) scroll inside
+ * their own strip; the edge that hides more tabs fades out, so the strip reads
+ * as scrollable. Scroll-driven, so it costs nothing: a strip that fits has an
+ * inactive timeline and no fade at all. */
+@property --tabs-fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --tabs-fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@supports (animation-timeline: scroll()) {
+  [data-slot="tabs-list"][data-variant="line"] {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black var(--tabs-fade-start),
+      black calc(100% - var(--tabs-fade-end)),
+      transparent
+    );
+    animation: tabs-scroll-fade linear both;
+    animation-timeline: scroll(self inline);
+  }
+}
+@keyframes tabs-scroll-fade {
+  from {
+    --tabs-fade-start: 0px;
+    --tabs-fade-end: 2rem;
+  }
+  to {
+    --tabs-fade-start: 2rem;
+    --tabs-fade-end: 0px;
+  }
+}
+
 @keyframes status-swap {
   from {
     opacity: 0;

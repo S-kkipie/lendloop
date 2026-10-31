@@ -143,7 +143,7 @@ function Console() {
         </TabsContent>
         <TabsContent value="automation">
           {health === undefined ? (
-            <TableSkeleton heads={["Notification", "Problem", "Tries", "Last error", "When", "Actions"]} columns="xl:grid-cols-6" />
+            <TableSkeleton heads={["Notification", "Problem", "Tries", "Last error", "Queued", "Actions"]} columns="xl:grid-cols-6" />
           ) : (
             <AutomationTab health={health} />
           )}
