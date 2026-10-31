@@ -15,8 +15,8 @@
     "convex:push": "convex dev --once",
     "docs:authz": "tsx scripts/authz-matrix.ts",
     "setup:local": "tsx scripts/setup.ts",
-    "stack:up": "docker compose up -d --build",
-    "stack:down": "docker compose down",
+    "stack:up": "docker compose --env-file n8n/.env up -d --build",
+    "stack:down": "docker compose --env-file n8n/.env down",
     "seed": "convex run seed:demo",
     "e2e:automation": "tsx scripts/e2e-automation.ts"
   },
