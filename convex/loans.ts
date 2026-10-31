@@ -1,17 +1,18 @@
 import { v } from "convex/values";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { enqueueEvent } from "./automation/outbox";
 import { audit } from "./lib/audit";
 import { today } from "./lib/config";
 import { appError } from "./lib/errors";
-import { userMutation } from "./lib/functions";
-import { loadLoanForParty, requireParty } from "./lib/loanAccess";
+import { userMutation, userQuery } from "./lib/functions";
+import { loadLoanForParty, nameOf, requireParty, summarizeLoan } from "./lib/loanAccess";
 import { applyLoanTransition } from "./lib/loanTransitions";
 import { enforceLimit } from "./lib/rateLimits";
-import { blockingLoans } from "./lib/tools";
+import { activeLoanFor, blockingLoans } from "./lib/tools";
 import { LIMITS } from "./lib/validators";
 import { checkRequestedRange, type RangeProblem } from "./model/dates";
+import { nextStep } from "./model/loanMachine";
 import { rangesOverlap } from "./model/overlap";
 
 const RANGE_MESSAGES: Record<RangeProblem, string> = {
@@ -136,5 +137,164 @@ export const decline = userMutation({
       notify: [{ type: "loan.declined", recipientId: loan.borrowerId }],
     });
     return null;
+  },
+});
+
+export const cancel = userMutation({
+  args: { loanId: v.id("loans") },
+  handler: async (ctx, { loanId }) => {
+    const { loan, party } = await loadLoanForParty(ctx, loanId);
+    const counterpart = party === "owner" ? loan.borrowerId : loan.ownerId;
+    await applyLoanTransition(ctx, {
+      loan,
+      action: "cancel",
+      actor: party,
+      actorId: ctx.user._id,
+      actorType: "user",
+      closeReason: party === "owner" ? "owner_cancelled" : "borrower_cancelled",
+      notify: [{ type: "loan.cancelled", recipientId: counterpart }],
+    });
+    return null;
+  },
+});
+
+export const handOver = userMutation({
+  args: { loanId: v.id("loans") },
+  handler: async (ctx, { loanId }) => {
+    const { loan, party } = await loadLoanForParty(ctx, loanId);
+    requireParty(party, "owner");
+    if (loan.status === "approved" && today() > loan.endDate) {
+      throw appError("INVALID", "This booking has already ended");
+    }
+    const active = await activeLoanFor(ctx, loan.toolId);
+    if (active && active._id !== loan._id) {
+      throw appError("CONFLICT", "This tool is still out on another loan");
+    }
+    await applyLoanTransition(ctx, {
+      loan,
+      action: "handOver",
+      actor: "owner",
+      actorId: ctx.user._id,
+      actorType: "user",
+      notify: [{ type: "loan.handed_over", recipientId: loan.borrowerId }],
+    });
+    return null;
+  },
+});
+
+export const markReturned = userMutation({
+  args: { loanId: v.id("loans") },
+  handler: async (ctx, { loanId }) => {
+    const { loan, party } = await loadLoanForParty(ctx, loanId);
+    requireParty(party, "owner"); // the owner confirms they got it back
+    await applyLoanTransition(ctx, {
+      loan,
+      action: "markReturned",
+      actor: "owner",
+      actorId: ctx.user._id,
+      actorType: "user",
+      notify: [{ type: "loan.returned", recipientId: loan.borrowerId }],
+    });
+    return null;
+  },
+});
+
+export const myRequests = userQuery({
+  args: {},
+  handler: async (ctx) => {
+    const loans = await ctx.db
+      .query("loans")
+      .withIndex("by_borrower_status", (q) => q.eq("borrowerId", ctx.user._id))
+      .take(200);
+    const t0 = today();
+    const sorted = loans.sort((a, b) => b._creationTime - a._creationTime);
+    return await Promise.all(sorted.map((loan) => summarizeLoan(ctx, loan, t0, "borrower")));
+  },
+});
+
+export const incoming = userQuery({
+  args: {},
+  handler: async (ctx) => {
+    const loans = await ctx.db
+      .query("loans")
+      .withIndex("by_owner_status", (q) => q.eq("ownerId", ctx.user._id))
+      .take(200);
+    const t0 = today();
+    const sorted = loans.sort((a, b) => b._creationTime - a._creationTime);
+    return await Promise.all(
+      sorted.map(async (loan) => {
+        const conflicts =
+          loan.status === "pending"
+            ? loans.filter(
+                (other) =>
+                  other._id !== loan._id &&
+                  other.toolId === loan.toolId &&
+                  (other.status === "pending" || other.status === "approved") &&
+                  rangesOverlap(other, loan),
+              ).length
+            : 0;
+        return { ...(await summarizeLoan(ctx, loan, t0, "owner")), conflicts };
+      }),
+    );
+  },
+});
+
+export const timeline = userQuery({
+  args: { loanId: v.id("loans") },
+  handler: async (ctx, { loanId }) => {
+    const loan = await ctx.db.get(loanId);
+    const party = loan?.ownerId === ctx.user._id ? "owner" : loan?.borrowerId === ctx.user._id ? "borrower" : null;
+    const isAdmin = ctx.role === "admin";
+    if (!loan || (!party && !isAdmin)) throw appError("NOT_FOUND", "Request not found");
+
+    const audits = await ctx.db
+      .query("auditLog")
+      .withIndex("by_entity", (q) => q.eq("entityType", "loan").eq("entityId", loanId))
+      .collect();
+    const events = await ctx.db
+      .query("outboxEvents")
+      .withIndex("by_loan", (q) => q.eq("loanId", loanId))
+      .collect();
+    const reminders = await ctx.db
+      .query("reminders")
+      .withIndex("by_loan", (q) => q.eq("loanId", loanId))
+      .collect();
+
+    const names = new Map<Id<"users">, string>();
+    const actorName = async (id: Id<"users"> | undefined) => {
+      if (!id) return "LendLoop";
+      if (!names.has(id)) names.set(id, await nameOf(ctx, id));
+      return names.get(id)!;
+    };
+
+    const statusEntries = await Promise.all(
+      audits.map(async (a) => ({
+        kind: "status" as const,
+        at: a.at,
+        action: a.action,
+        toStatus: a.toStatus,
+        reason: a.reason,
+        actor: a.actorType === "system" ? "LendLoop" : await actorName(a.actorId),
+      })),
+    );
+    const notificationEntries = events.map((e) => ({
+      kind: "notification" as const,
+      at: e.sentAt ?? e.deliveredAt ?? e._creationTime,
+      type: e.type,
+      status: e.status,
+      recipient: e.recipientId === loan.ownerId ? ("owner" as const) : ("borrower" as const),
+      error: isAdmin ? e.lastError : undefined,
+    }));
+    const reminderEntries = reminders.map((r) => ({
+      kind: "reminder" as const,
+      at: r._creationTime,
+      status: r.status,
+    }));
+
+    return {
+      loan: await summarizeLoan(ctx, loan, today(), party ?? "admin"),
+      nextStep: nextStep(loan.status),
+      entries: [...statusEntries, ...notificationEntries, ...reminderEntries].sort((a, b) => a.at - b.at),
+    };
   },
 });
