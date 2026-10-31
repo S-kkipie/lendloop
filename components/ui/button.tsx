@@ -1,6 +1,8 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
+import Link from "next/link"
+import type { ComponentProps } from "react"
 
 // Ledger buttons: 8 px radius, hairline outline, one cobalt fill, press scale
 // 0.97 (motion-press). Hover only under a fine pointer (see globals.css).
@@ -54,4 +56,24 @@ function Button({
   )
 }
 
-export { Button, buttonVariants }
+/**
+ * A link that looks like a button. Navigation stays a real link (role "link",
+ * middle-click, prefetch); `<Button render={<Link />}>` would announce it as a
+ * button instead.
+ */
+function ButtonLink({
+  className,
+  variant = "default",
+  size = "default",
+  ...props
+}: ComponentProps<typeof Link> & VariantProps<typeof buttonVariants>) {
+  return (
+    <Link
+      data-slot="button"
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    />
+  )
+}
+
+export { Button, ButtonLink, buttonVariants }

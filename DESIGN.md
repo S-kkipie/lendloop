@@ -76,9 +76,24 @@ table above passes WCAG AA (checked with a script against the CSS file).
   (mobile nav), Popover, DropdownMenu, Select, Tooltip (500 ms hover delay,
   instant on focus and for adjacent tooltips), Sonner toasts bottom-right.
 - Command palette: `CommandDialog` has no open or close motion.
-- Calendar (react-day-picker): range ends in cobalt, middle in cobalt soft,
-  disabled days struck through. It reads "today", so render it client-only
-  (after mount) and build dates as local calendar days, never `Date.UTC`.
+- Calendar (react-day-picker): range ends in cobalt, middle in cobalt soft.
+  It reads "today", so render it client-only (after mount) and build dates as
+  local calendar days, never `Date.UTC` (`lib/calendarDays.ts`). Its parts
+  (Root, Chevron, DayButton) are module-level components: inline ones remount
+  the grid on every parent render and drop clicks and focus.
+- DateRangePicker (`components/loans`): past days fade (skipped by the
+  keyboard); booked days are struck through on surface 2 and stay focusable
+  with `aria-disabled` and a label ending "unavailable, booked", so keyboard
+  and screen reader users learn why. Hover or focus on a booked day shows its
+  range under the grid; picking across a booking or past the 30-day limit
+  restarts the selection with a one-line reason in a live region.
+- StatefulButton: idle, loading and success labels share one grid cell and
+  swap with `motion-swap` (180 ms crossfade with a 2 px blur); it never greys
+  out while busy (`aria-busy`, the caller ignores repeat clicks).
+- Browse: `ToolCard` (mono No., availability badge, name, category and
+  condition, lender with the Trusted seal, or "Yours"); category chips are
+  toggle buttons in one row that scrolls sideways below `sm`; filters live in
+  the URL (`q`, `category`, `available`); `/` focuses search.
 - Icons: Phosphor only (`@phosphor-icons/react`), regular weight, `fill` for
   status glyphs (seal, check), `bold` inside small badges. No emoji, no lucide.
 

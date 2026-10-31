@@ -5,6 +5,7 @@ import { cn } from "cn"
 import {
   DayPicker,
   getDefaultClassNames,
+  type CustomComponents as DayPickerComponents,
   type DayButton,
   type Locale,
 } from "react-day-picker"
@@ -118,12 +119,13 @@ function Calendar({
           "relative isolate z-0 rounded-r-(--cell-radius) bg-primary-soft after:absolute after:inset-y-0 after:left-0 after:w-4 after:bg-primary-soft",
           defaultClassNames.range_end
         ),
+        // Day buttons set their own ink, so state colours target the button.
         today: cn(
-          "rounded-(--cell-radius) font-semibold text-primary-ink data-[selected=true]:rounded-none",
+          "rounded-(--cell-radius) data-[selected=true]:rounded-none [&>button:not([data-range-start=true],[data-range-end=true],[data-selected-single=true])]:font-semibold [&>button:not([data-range-start=true],[data-range-end=true],[data-selected-single=true])]:text-primary-ink",
           defaultClassNames.today
         ),
         outside: cn(
-          "text-muted-foreground aria-selected:text-muted-foreground",
+          "[&>button]:text-muted-foreground",
           defaultClassNames.outside
         ),
         disabled: cn(
@@ -133,50 +135,55 @@ function Calendar({
         hidden: cn("invisible", defaultClassNames.hidden),
         ...classNames,
       }}
+      // Stable component identities: components created inline here would be
+      // new types on every render, remounting the grid (and dropping clicks
+      // and focus) whenever the calendar's parent re-renders.
       components={{
-        Root: ({ className, rootRef, ...props }) => {
-          return (
-            <div
-              data-slot="calendar"
-              ref={rootRef}
-              className={cn(className)}
-              {...props}
-            />
-          )
-        },
-        Chevron: ({ className, orientation, ...props }) => {
-          if (orientation === "left") {
-            return (
-              <CaretLeftIcon className={cn("size-4", className)} {...props} />
-            )
-          }
-
-          if (orientation === "right") {
-            return (
-              <CaretRightIcon className={cn("size-4", className)} {...props} />
-            )
-          }
-
-          return (
-            <CaretDownIcon className={cn("size-4", className)} {...props} />
-          )
-        },
-        DayButton: ({ ...props }) => (
-          <CalendarDayButton locale={locale} {...props} />
-        ),
-        WeekNumber: ({ children, ...props }) => {
-          return (
-            <td {...props}>
-              <div className="flex size-(--cell-size) items-center justify-center text-center">
-                {children}
-              </div>
-            </td>
-          )
-        },
+        Root: CalendarRoot,
+        Chevron: CalendarChevron,
+        DayButton: CalendarDayButton,
+        WeekNumber: CalendarWeekNumber,
         ...components,
       }}
       {...props}
     />
+  )
+}
+
+function CalendarRoot({
+  className,
+  rootRef,
+  ...props
+}: React.ComponentProps<NonNullable<DayPickerComponents["Root"]>>) {
+  return (
+    <div data-slot="calendar" ref={rootRef} className={cn(className)} {...props} />
+  )
+}
+
+function CalendarChevron({
+  className,
+  orientation,
+  ...props
+}: React.ComponentProps<NonNullable<DayPickerComponents["Chevron"]>>) {
+  if (orientation === "left") {
+    return <CaretLeftIcon className={cn("size-4", className)} {...props} />
+  }
+  if (orientation === "right") {
+    return <CaretRightIcon className={cn("size-4", className)} {...props} />
+  }
+  return <CaretDownIcon className={cn("size-4", className)} {...props} />
+}
+
+function CalendarWeekNumber({
+  children,
+  ...props
+}: React.ComponentProps<NonNullable<DayPickerComponents["WeekNumber"]>>) {
+  return (
+    <td {...props}>
+      <div className="flex size-(--cell-size) items-center justify-center text-center">
+        {children}
+      </div>
+    </td>
   )
 }
 
@@ -196,6 +203,7 @@ function CalendarDayButton({
 
   return (
     <Button
+      ref={ref}
       variant="ghost"
       size="icon"
       data-day={day.date.toLocaleDateString(locale?.code)}

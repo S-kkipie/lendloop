@@ -1,6 +1,6 @@
 import { ConvexError } from "convex/values";
 import { describe, expect, it } from "vitest";
-import { errorCode, messageForError } from "./convexErrors";
+import { errorCode, isNotFound, messageForError } from "./convexErrors";
 
 const fail = (code: string, message: string) => new ConvexError({ code, message });
 
@@ -45,5 +45,18 @@ describe("errorCode", () => {
     [null],
   ])("returns null when there is no known code (%#)", (error) => {
     expect(errorCode(error)).toBeNull();
+  });
+});
+
+describe("isNotFound", () => {
+  it.each([
+    [fail("NOT_FOUND", "Tool not found"), true],
+    [new Error('[CONVEX Q(tools:get)] ArgumentValidationError: Value does not match validator.'), true],
+    [fail("FORBIDDEN", "Admins only"), false],
+    [new Error("[CONVEX Q(tools:get)] Server Error"), false],
+    ["NOT_FOUND", false],
+    [null, false],
+  ])("%s -> %s", (error, expected) => {
+    expect(isNotFound(error)).toBe(expected);
   });
 });

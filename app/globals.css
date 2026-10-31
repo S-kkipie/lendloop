@@ -310,6 +310,20 @@
     animation-delay: calc(var(--blur-fade-index, 0) * 40ms);
   }
 
+  /* Labels that swap in place (StatefulButton): crossfade with a 2 px blur so
+   * the two labels read as one changing object. */
+  .motion-swap {
+    transition:
+      opacity 180ms var(--ease-out),
+      filter 180ms var(--ease-out),
+      transform 180ms var(--ease-out);
+  }
+  .motion-swap[data-hidden="true"] {
+    opacity: 0;
+    filter: blur(2px);
+    transform: scale(0.97);
+  }
+
   /* Landing band: the static picture under the Dithering shader. It is what
    * renders before the shader mounts, without WebGL, and if the shader fails. */
   .dither-fallback {
@@ -375,6 +389,10 @@ html:has([data-page="landing"]) {
   }
   .blur-fade {
     animation-name: fade-in;
+  }
+  .motion-swap[data-hidden="true"] {
+    filter: none;
+    transform: none;
   }
   html:has([data-page="landing"]) {
     scroll-behavior: auto;

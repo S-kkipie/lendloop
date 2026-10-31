@@ -44,3 +44,13 @@ export function messageForError(error: unknown): string {
   const message = errorData(error)?.message;
   return typeof message === "string" && message.trim() ? message.trim() : FALLBACK;
 }
+
+/**
+ * True when the thing asked for doesn't exist for this viewer: a NOT_FOUND
+ * from our functions, or an id Convex rejects before the function runs (a
+ * mistyped or truncated link, e.g. /tools/abc).
+ */
+export function isNotFound(error: unknown): boolean {
+  if (errorCode(error) === "NOT_FOUND") return true;
+  return error instanceof Error && /ArgumentValidationError|does not match validator/.test(error.message);
+}
