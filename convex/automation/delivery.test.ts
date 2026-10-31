@@ -31,7 +31,7 @@ async function requestLoan() {
 const events = (t: ReturnType<typeof setupTest>) => t.run((ctx) => ctx.db.query("outboxEvents").collect());
 
 test("delivers a signed payload and marks the event delivered", async () => {
-  const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => new Response(null, { status: 202 }));
+  const fetchMock = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(async () => new Response(null, { status: 202 }));
   vi.stubGlobal("fetch", fetchMock);
   const { t, w } = await requestLoan();
   await t.finishAllScheduledFunctions(vi.runAllTimers);
