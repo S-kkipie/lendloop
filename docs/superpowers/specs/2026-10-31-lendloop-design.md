@@ -50,9 +50,9 @@ Chat, ratings, photos, notification preferences, reminder escalation, payments o
                     └──────┬────────────────────────┘                │
                            │ JWT                                     ▼
  Browser ──HTTPS──▶ Next.js (Vercel) ──websocket+JWT──▶  Convex
-  (UI only;         proxy.ts redirects                   ├─ queries/mutations (authz wrappers)
-   no authz)        private routes (UX only,             ├─ outbox + scheduler (retries)
-                    not security)                        ├─ crons (expiry, heartbeat check)
+  (UI only;         proxy.ts attaches                    ├─ queries/mutations (authz wrappers)
+   no authz)        Clerk session only;                  ├─ outbox + scheduler (retries)
+                    layouts redirect (UX)                ├─ crons (expiry, heartbeat check)
                                                          └─ httpActions /n8n/*, /clerk/webhook, /health
                                                               ▲                │
                                      HMAC n8n→Convex          │                │ HMAC Convex→n8n
@@ -396,7 +396,7 @@ n8n credentials are provisioned by `entrypoint.sh`: it writes a temporary creden
 ### Hardening
 
 - **n8n:** `N8N_BLOCK_ENV_ACCESS_IN_NODE=true`, `EXECUTIONS_DATA_SAVE_ON_SUCCESS=none`, `EXECUTIONS_DATA_SAVE_ON_ERROR=all`, `EXECUTIONS_DATA_MAX_AGE=168`, `EXECUTIONS_DATA_PRUNE=true`, diagnostics off, Postgres backend, pinned image version, owner account claimed before the instance is exposed.
-- **Next.js:** security headers via `next.config` (CSP allowing Clerk and Convex origins, HSTS, `X-Content-Type-Options`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, `frame-ancestors 'none'`). `proxy.ts` only redirects for UX.
+- **Next.js:** security headers via `next.config` (CSP allowing Clerk and Convex origins, HSTS, `X-Content-Type-Options`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, `frame-ancestors 'none'`). `proxy.ts` runs `clerkMiddleware()` with no route rules (Clerk deprecated `createRouteMatcher` in favour of resource-level checks); app layouts call `auth.protect()` for UX redirects only.
 - **Convex:** all validation server-side with Convex validators (lengths, enums, trimming); rate limits via `@convex-dev/rate-limiter` (`loans.request` 10/hour/user, `tools.create` 20/day/user, inbound HTTP endpoints global token bucket).
 - **Logging:** `logger.ts` emits structured JSON and redacts `email`, `name`, `message` keys and email-shaped strings. Payload bodies are never logged.
 - **Audit:** every state transition and admin action writes to the append-only `auditLog`; no function updates or deletes it.
@@ -532,7 +532,7 @@ Clerk production instance with an owned domain; a secret manager with scheduled 
 | Convex local deployment can `fetch` `http://localhost:5678` **Result 2026-10-31: works (both `localhost` and `127.0.0.1` return 200)** | run Convex self-hosted inside the compose network |
 | n8n 2.x: Crypto node HMAC over the Raw Body; Code node constant-time compare without builtins; CLI activation of imported workflows; credential import from generated JSON; `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` breaks nothing; Remove Duplicates with workflow scope | Code node with `crypto` builtin allowlisted on task runners; REST API for activation |
 | Claiming the n8n owner account before a public instance is reachable | provision behind Railway private networking until the owner is set |
-| Clerk session-token claims (`role`, `email`, `name`) arrive on `ctx.auth.getUserIdentity()` | JWT template named `convex` with the same claims |
+| Clerk session-token claims (`role`, `email`, `name`) arrive on `ctx.auth.getUserIdentity()` **Result 2026-10-31: works with the native Convex integration (`aud: convex`) plus custom claims; role change visible after a forced token refresh** | JWT template named `convex` with the same claims |
 | Paper Shaders under Next.js 16 (client-only, dynamic import) | static CSS gradient band |
 | Railway build and run of our n8n image with Postgres | Fly.io with the same image |
 
