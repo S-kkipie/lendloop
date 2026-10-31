@@ -29,7 +29,8 @@ const src = "/opt/lendloop/workflows";
 const placeholders = ["CONVEX_SITE_URL", "MAIL_FROM", "OPS_EMAIL"];
 for (const file of fs.readdirSync(src).filter((f) => f.endsWith(".json"))) {
   let text = fs.readFileSync(path.join(src, file), "utf8");
-  for (const key of placeholders) text = text.split(`{{${key}}}`).join(process.env[key]);
+  // Placeholders sit inside JSON strings, so values are inserted JSON-escaped.
+  for (const key of placeholders) text = text.split(`{{${key}}}`).join(JSON.stringify(process.env[key]).slice(1, -1));
   JSON.parse(text); // fail fast on a broken render
   fs.writeFileSync(path.join(process.env.WORK, "workflows", file), text);
 }
