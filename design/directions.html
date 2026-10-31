@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en" data-active="a">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LendLoop · direcciones visuales</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Fragment+Mono&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+/* Hallmark · direction comparison mockup (3 candidates) · A: modern-minimal / sage · B: modern-minimal / cobalt · C: editorial / terracotta
+ * Mockup only. Shaders: @paper-design/shaders-react 0.0.82 via esm.sh, CSS gradient fallback underneath. */
+
+/* ---------- mockup chrome (not part of the design) ---------- */
+:root {
+  --chrome-bg: oklch(96.5% 0 0);
+  --chrome-ink: oklch(25% 0 0);
+  --chrome-muted: oklch(52% 0 0);
+  --chrome-line: oklch(88% 0 0);
+  --chrome-sel: oklch(22% 0 0);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; overflow-x: clip; }
+body { background: var(--chrome-bg); color: var(--chrome-ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+.switcher { position: sticky; top: 0; z-index: 40; background: color-mix(in oklch, var(--chrome-bg) 88%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--chrome-line); padding: 10px 16px; }
+.switcher__inner { max-width: 1240px; margin: 0 auto; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.switcher__title { font-weight: 600; font-size: 13px; white-space: nowrap; }
+.seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: oklch(91% 0 0); border-radius: 10px; padding: 3px; gap: 3px; width: min(100%, 420px); }
+.seg button { appearance: none; border: 0; background: transparent; border-radius: 8px; padding: 7px 8px; font: 500 13px/1.3 system-ui, sans-serif; color: var(--chrome-muted); cursor: pointer; white-space: nowrap; transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out); }
+.seg button[aria-selected="true"] { background: white; color: var(--chrome-sel); box-shadow: 0 1px 2px oklch(0% 0 0 / 0.08); }
+.seg button:focus-visible { outline: 2px solid var(--chrome-sel); outline-offset: 1px; }
+html[data-active="a"] .dir:not([data-dir="a"]),
+html[data-active="b"] .dir:not([data-dir="b"]),
+html[data-active="c"] .dir:not([data-dir="c"]) { display: none; }
+.info { max-width: 1240px; margin: 20px auto 16px; padding: 0 16px; }
+.info h2 { margin: 0 0 4px; font-size: 20px; letter-spacing: -0.01em; }
+.info p { margin: 0 0 10px; color: var(--chrome-muted); max-width: 70ch; }
+.info dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; margin: 0; font-size: 13px; }
+.info dt { color: var(--chrome-muted); }
+.info dd { margin: 0; }
+.swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+.swatches span { width: 22px; height: 22px; border-radius: 6px; border: 1px solid oklch(0% 0 0 / 0.08); }
+.verdict { display: inline-block; margin-top: 10px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: oklch(93% 0.05 150); color: oklch(35% 0.08 150); }
+.verdict--risk { background: oklch(94% 0.04 70); color: oklch(42% 0.09 60); }
+.frame { max-width: 1240px; margin: 0 auto 48px; padding: 0 16px; }
+.site { border-radius: 18px; overflow: hidden; box-shadow: 0 1px 0 oklch(0% 0 0 / 0.04), 0 12px 40px -12px oklch(0% 0 0 / 0.12); }
+.section-label { max-width: 1240px; margin: 28px auto 10px; padding: 0 16px; font: 600 12px/1 system-ui, sans-serif; color: var(--chrome-muted); }
+
+/* ---------- shared design primitives (driven by per-direction tokens) ---------- */
+.site { background: var(--paper); color: var(--ink); font-family: var(--font-body); }
+.site :where(a) { color: inherit; text-decoration: none; }
+.btn { display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; border-radius: var(--radius-btn); font: 600 15px/1 var(--font-body); padding: 12px 18px; border: 1px solid transparent; cursor: pointer; transition: transform 140ms var(--ease-out), background-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out); }
+.btn:active { transform: scale(0.97); }
+.btn:focus-visible, .site a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.btn-primary { background: var(--btn-bg); color: var(--btn-ink); }
+.btn-primary:hover { background: var(--btn-bg-hover); }
+.btn-ghost { background: transparent; color: var(--ink); border-color: var(--hairline); }
+.btn-ghost:hover { background: var(--surface-2); }
+.btn-sm { font-size: 13px; padding: 8px 12px; }
+.mono { font-family: var(--font-mono); }
+.badge { display: inline-flex; align-items: center; gap: 6px; font: 500 12px/1 var(--font-body); padding: 5px 9px; border-radius: var(--radius-badge); white-space: nowrap; }
+.badge i { font-size: 13px; }
+.b-requested { background: var(--neutral-soft); color: var(--neutral-ink); }
+.b-approved { background: var(--accent-soft); color: var(--accent-ink-strong); }
+.b-active { background: var(--info-soft); color: var(--info-ink); }
+.b-returned { background: var(--ok-soft); color: var(--ok-ink); }
+.b-closed { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--hairline); }
+.b-overdue { background: var(--danger); color: var(--danger-on); }
+.shader-host { position: absolute; inset: 0; }
+.shader-host canvas { display: block; }
+.icon-tile { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: var(--radius-tile); background: var(--accent-soft); color: var(--accent-ink-strong); font-size: 20px; }
+.app { padding: 24px 20px; border-top: 1px solid var(--hairline); background: var(--surface-2); }
+.app__grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .app { padding: 40px; } .app__grid { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius-card); padding: 20px; min-width: 0; }
+.panel h2 { margin: 0; font: 600 16px/1.3 var(--font-body); letter-spacing: -0.01em; }
+.badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+
+/* tool card */
+.tool-card { display: grid; gap: 16px; }
+.tool-card__top { display: flex; gap: 12px; align-items: flex-start; }
+.tool-card__title { flex: 1; min-width: 0; }
+.tool-card__title h2 { overflow-wrap: anywhere; }
+.tool-card__meta { margin-top: 3px; font-size: 13px; color: var(--muted); }
+.owner { display: flex; align-items: center; gap: 10px; font-size: 14px; padding-top: 14px; border-top: 1px solid var(--hairline); flex-wrap: wrap; }
+.avatar { width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; font: 600 11px/1 var(--font-body); background: var(--neutral-soft); color: var(--neutral-ink); flex: none; }
+.trusted { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; color: var(--accent-ink-strong); }
+.trusted i { font-size: 15px; }
+.booked { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.booked span { padding: 4px 8px; border-radius: 6px; background: var(--surface-2); }
+
+/* timeline */
+.tl { list-style: none; margin: 16px 0 0; padding: 0; position: relative; }
+.tl li { position: relative; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; padding-bottom: 16px; font-size: 14px; }
+.tl li::before { content: ""; position: absolute; left: 10px; top: 22px; bottom: 0; width: 1px; background: var(--hairline); }
+.tl li:last-child::before { display: none; }
+.tl .dot { width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center; background: var(--surface); box-shadow: inset 0 0 0 1px var(--hairline); color: var(--muted); font-size: 12px; position: relative; z-index: 1; }
+.tl .dot--auto { background: var(--accent-soft); box-shadow: none; color: var(--accent-ink-strong); }
+.tl .dot--warn { background: var(--danger-soft); box-shadow: none; color: var(--danger-ink); }
+.tl .dot--next { box-shadow: inset 0 0 0 1px var(--muted); background: transparent; border: 1px dashed var(--hairline); }
+.tl .what { min-width: 0; }
+.tl .what small { display: block; color: var(--muted); font-size: 12px; margin-top: 1px; }
+.tl .when { font: 400 12px/1.6 var(--font-mono); color: var(--muted); white-space: nowrap; }
+.tl li.is-next .what { color: var(--muted); }
+.loan-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.loan-head p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+
+/* ======================================================================
+   DIRECTION A · Calm product (Integrated Biosciences hero + Supaste pill nav + Cal.com inbox)
+   ====================================================================== */
+.dir-a {
+  --paper: oklch(98.6% 0.004 160);
+  --surface: oklch(100% 0 0);
+  --surface-2: oklch(97.2% 0.006 160);
+  --ink: oklch(21% 0.018 165);
+  --muted: oklch(48% 0.014 165);
+  --hairline: oklch(91.5% 0.008 160);
+  --accent: oklch(44% 0.085 165);
+  --accent-soft: oklch(94.5% 0.03 165);
+  --accent-ink-strong: oklch(36% 0.075 165);
+  --btn-bg: oklch(21% 0.018 165);
+  --btn-bg-hover: oklch(28% 0.025 165);
+  --btn-ink: oklch(98.6% 0.004 160);
+  --focus: oklch(44% 0.085 165);
+  --neutral-soft: oklch(94.5% 0.006 160); --neutral-ink: oklch(34% 0.014 165);
+  --info-soft: oklch(94.5% 0.03 235); --info-ink: oklch(40% 0.09 240);
+  --ok-soft: oklch(94.5% 0.035 150); --ok-ink: oklch(38% 0.08 150);
+  --danger: oklch(55% 0.17 32); --danger-on: oklch(99% 0.01 30); --danger-soft: oklch(95% 0.03 32); --danger-ink: oklch(45% 0.14 32);
+  --font-display: "Host Grotesk", system-ui, sans-serif;
+  --font-body: "Host Grotesk", system-ui, sans-serif;
+  --font-mono: "Fragment Mono", ui-monospace, monospace;
+  --radius-btn: 999px; --radius-card: 16px; --radius-badge: 999px; --radius-tile: 12px;
+}
+.a-top { padding: 16px; }
+.a-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 760px; margin: 0 auto; padding: 6px 6px 6px 16px; border-radius: 999px; background: var(--surface); border: 1px solid var(--hairline); }
+.brand { display: inline-flex; align-items: center; gap: 8px; font: 600 16px/1 var(--font-display); letter-spacing: -0.02em; white-space: nowrap; }
+.brand-mark { width: 22px; height: 14px; position: relative; flex: none; }
+.brand-mark::before, .brand-mark::after { content: ""; position: absolute; top: 0; width: 14px; height: 14px; border-radius: 999px; border: 2.5px solid currentColor; }
+.brand-mark::before { left: 0; }
+.brand-mark::after { left: 8px; border-color: var(--accent); }
+.a-nav__links { display: none; gap: 22px; font-size: 14px; color: var(--muted); }
+@media (min-width: 720px) { .a-nav__links { display: flex; } }
+.a-hero { position: relative; margin: 0 16px; border-radius: 28px; overflow: hidden; min-height: 560px;
+  background: radial-gradient(60% 70% at 15% 20%, oklch(93% 0.03 160), transparent 70%), radial-gradient(50% 60% at 85% 80%, oklch(86% 0.05 165), transparent 70%), oklch(95% 0.02 150); }
+.a-hero__grid { position: relative; z-index: 1; display: grid; gap: 28px; padding: clamp(28px, 5vw, 64px); grid-template-columns: minmax(0, 1fr); align-items: end; min-height: 560px; }
+@media (min-width: 960px) { .a-hero__grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); } }
+.a-hero h1 { margin: 0; font: 600 clamp(2.5rem, 6.2vw, 4.6rem)/0.98 var(--font-display); letter-spacing: -0.045em; overflow-wrap: anywhere; min-width: 0; }
+.a-hero h1 span { color: var(--accent-ink-strong); }
+.a-hero p { margin: 18px 0 26px; font-size: 18px; line-height: 1.45; color: oklch(30% 0.02 165); max-width: 40ch; }
+.cta-row { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+.chip-arrow { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 999px; background: var(--paper); color: var(--ink); margin-right: -8px; }
+.text-link { font-size: 15px; font-weight: 500; text-decoration: underline; text-decoration-color: color-mix(in oklch, currentColor 35%, transparent); text-underline-offset: 4px; }
+.avail { background: color-mix(in oklch, var(--surface) 86%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-radius: 20px; padding: 8px; box-shadow: 0 1px 2px oklch(30% 0.05 165 / 0.08); }
+.avail header { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 12px 8px; font-size: 13px; font-weight: 600; }
+.avail header .mono { font-weight: 400; color: var(--muted); font-size: 12px; }
+.avail ul { list-style: none; margin: 0; padding: 0; }
+.avail li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; font-size: 15px; }
+.avail li + li { margin-top: 2px; }
+.avail li:hover { background: var(--surface-2); }
+.avail li i.lead { font-size: 18px; color: var(--accent-ink-strong); }
+.avail li .name { flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.avail li .cat { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.avail footer { display: flex; align-items: center; gap: 8px; padding: 10px 12px 6px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--hairline); margin-top: 6px; }
+.a-foot { padding: 28px 16px 0; text-align: center; overflow: hidden; }
+.a-foot__links { display: flex; justify-content: center; gap: 18px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.a-foot__word { font: 600 clamp(4rem, 19vw, 15rem)/0.78 var(--font-display); letter-spacing: -0.06em; color: oklch(64% 0.07 165); margin-top: 18px; transform: translateY(14%); user-select: none; }
+
+/* ======================================================================
+   DIRECTION B · Precise ledger (Zed + Linear/Stripe tables)
+   ====================================================================== */
+.dir-b {
+  --paper: oklch(99.3% 0.002 260);
+  --surface: oklch(100% 0 0);
+  --surface-2: oklch(97.6% 0.004 260);
+  --ink: oklch(19% 0.012 262);
+  --muted: oklch(51% 0.012 262);
+  --hairline: oklch(91.5% 0.005 262);
+  --accent: oklch(50% 0.19 263);
+  --accent-soft: oklch(95% 0.03 263);
+  --accent-ink-strong: oklch(44% 0.18 263);
+  --btn-bg: oklch(46% 0.19 263);
+  --btn-bg-hover: oklch(41% 0.18 263);
+  --btn-ink: oklch(99% 0 0);
+  --focus: oklch(50% 0.19 263);
+  --neutral-soft: oklch(95% 0.004 262); --neutral-ink: oklch(36% 0.012 262);
+  --info-soft: oklch(95% 0.04 200); --info-ink: oklch(42% 0.08 210);
+  --ok-soft: oklch(95% 0.04 155); --ok-ink: oklch(40% 0.09 155);
+  --danger: oklch(56% 0.19 25); --danger-on: oklch(99% 0 0); --danger-soft: oklch(95.5% 0.03 25); --danger-ink: oklch(48% 0.17 25);
+  --font-display: "IBM Plex Sans", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --radius-btn: 8px; --radius-card: 10px; --radius-badge: 6px; --radius-tile: 8px;
+}
+.b-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px clamp(16px, 4vw, 40px); border-bottom: 1px solid var(--hairline); }
+.b-nav .brand-mark::after { border-color: var(--accent); }
+.b-nav__links { display: none; gap: 24px; font-size: 14px; color: var(--muted); }
+@media (min-width: 720px) { .b-nav__links { display: flex; } }
+kbd { font: 500 11px/1 var(--font-mono); padding: 3px 5px; border-radius: 4px; background: oklch(100% 0 0 / 0.14); }
+.btn-ghost kbd { background: var(--surface-2); color: var(--muted); box-shadow: inset 0 0 0 1px var(--hairline); }
+.b-hero { padding: clamp(36px, 6vw, 72px) clamp(16px, 4vw, 40px) 0; }
+.b-hero h1 { margin: 0; font: 600 clamp(2.4rem, 5.6vw, 4.2rem)/1 var(--font-display); letter-spacing: -0.04em; max-width: 14ch; overflow-wrap: anywhere; }
+.b-hero p { margin: 18px 0 26px; font-size: 17px; color: var(--muted); max-width: 46ch; }
+.b-band { position: relative; height: 120px; margin-top: 44px; border-block: 1px solid var(--hairline);
+  background: linear-gradient(90deg, oklch(95% 0.03 263), oklch(88% 0.07 263) 55%, oklch(96% 0.02 263)); }
+.b-ledger { margin: 0 clamp(16px, 4vw, 40px) clamp(28px, 5vw, 48px); border: 1px solid var(--hairline); border-top: 0; border-radius: 0 0 var(--radius-card) var(--radius-card); overflow: hidden; background: var(--surface); }
+.b-ledger__head { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--hairline); gap: 12px; flex-wrap: wrap; }
+.b-ledger__head strong { color: var(--ink); font-weight: 600; }
+.b-ledger table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.b-ledger th { text-align: left; font: 500 11px/1 var(--font-mono); color: var(--muted); padding: 10px 16px; background: var(--surface-2); letter-spacing: 0.02em; }
+.b-ledger td { padding: 12px 16px; border-top: 1px solid var(--hairline); }
+.b-ledger td.no { font-family: var(--font-mono); color: var(--muted); font-size: 12px; width: 64px; }
+.b-ledger td.cat { color: var(--muted); }
+.b-ledger tr:hover td { background: var(--surface-2); }
+.inbox-row { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; padding: 14px 0; border-top: 1px solid var(--hairline); }
+.inbox-row:first-of-type { border-top: 0; }
+.inbox-row .line { font-size: 14px; }
+.inbox-row .sub { font-size: 12px; color: var(--muted); font-family: var(--font-mono); margin-top: 2px; }
+.inbox-row .acts { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+.warn-note { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--danger-ink); }
+.tabs-b { display: flex; gap: 4px; margin: 14px 0 6px; border-bottom: 1px solid var(--hairline); }
+.tabs-b span { font-size: 13px; padding: 8px 10px; color: var(--muted); margin-bottom: -1px; white-space: nowrap; }
+.tabs-b span.on { color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); font-weight: 500; }
+.tabs-b em { font-style: normal; font: 500 11px/1 var(--font-mono); margin-left: 6px; padding: 2px 5px; border-radius: 4px; background: var(--accent-soft); color: var(--accent-ink-strong); }
+.b-foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 20px clamp(16px, 4vw, 40px); border-top: 1px solid var(--hairline); font: 400 12px/1.4 var(--font-mono); color: var(--muted); }
+.b-foot nav { display: flex; gap: 18px; flex-wrap: wrap; }
+
+/* ======================================================================
+   DIRECTION C · Neighbourhood editorial (Claude palette + Decimals footer + Library of Things)
+   ====================================================================== */
+.dir-c {
+  --paper: oklch(97.4% 0.01 80);
+  --surface: oklch(99.3% 0.005 80);
+  --surface-2: oklch(95.2% 0.013 78);
+  --ink: oklch(23% 0.02 55);
+  --muted: oklch(49% 0.02 60);
+  --hairline: oklch(89.5% 0.014 75);
+  --accent: oklch(56% 0.13 40);
+  --accent-soft: oklch(93.5% 0.035 45);
+  --accent-ink-strong: oklch(47% 0.12 38);
+  --btn-bg: oklch(56% 0.13 40);
+  --btn-bg-hover: oklch(51% 0.13 40);
+  --btn-ink: oklch(99% 0.01 80);
+  --focus: oklch(47% 0.12 38);
+  --neutral-soft: oklch(93.5% 0.012 75); --neutral-ink: oklch(36% 0.02 55);
+  --info-soft: oklch(94% 0.025 220); --info-ink: oklch(40% 0.06 225);
+  --ok-soft: oklch(94% 0.035 140); --ok-ink: oklch(39% 0.07 140);
+  --danger: oklch(52% 0.16 28); --danger-on: oklch(99% 0.01 80); --danger-soft: oklch(94.5% 0.03 28); --danger-ink: oklch(45% 0.14 28);
+  --font-display: "Newsreader", Georgia, serif;
+  --font-body: "Hanken Grotesk", system-ui, sans-serif;
+  --font-mono: "Fragment Mono", ui-monospace, monospace;
+  --radius-btn: 10px; --radius-card: 14px; --radius-badge: 999px; --radius-tile: 999px;
+}
+.c-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px clamp(16px, 4vw, 48px); }
+.c-nav .brand { font: 500 22px/1 var(--font-display); letter-spacing: -0.01em; }
+.c-nav__links { display: none; gap: 24px; font-size: 14px; }
+@media (min-width: 720px) { .c-nav__links { display: flex; } }
+.c-hero { display: grid; gap: 28px; padding: clamp(20px, 4vw, 40px) clamp(16px, 4vw, 48px) clamp(32px, 5vw, 56px); grid-template-columns: minmax(0, 1fr); align-items: end; }
+@media (min-width: 960px) { .c-hero { grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr); } .dir-c .c-arch { width: 100%; } }
+.c-hero h1 { margin: 0; font: 400 clamp(2.8rem, 7vw, 5.6rem)/0.95 var(--font-display); letter-spacing: -0.03em; overflow-wrap: anywhere; min-width: 0; }
+.c-hero p { margin: 20px 0 26px; font-size: 18px; max-width: 42ch; color: var(--muted); }
+.c-arch { position: relative; aspect-ratio: 3 / 4; max-height: 420px; width: min(100%, 240px); justify-self: end; border-radius: 999px 999px 18px 18px; overflow: hidden;
+  background: radial-gradient(70% 60% at 50% 40%, oklch(80% 0.09 50), transparent 70%), oklch(88% 0.05 70); }
+.c-list { margin: 0 clamp(16px, 4vw, 48px); padding: 8px 0 clamp(28px, 5vw, 48px); display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 40px; border-top: 1px solid var(--ink); }
+@media (min-width: 720px) { .c-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.c-list div { display: flex; align-items: baseline; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--hairline); }
+.c-list .no { font: 400 12px/1 var(--font-mono); color: var(--muted); width: 26px; flex: none; }
+.c-list .name { flex: 1; min-width: 0; font: 400 21px/1.3 var(--font-display); }
+.c-list .cat { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.c-list__head { display: flex; justify-content: space-between; margin: 0 clamp(16px, 4vw, 48px); padding-bottom: 10px; font-size: 13px; color: var(--muted); }
+.c-foot { background: var(--ink); color: var(--paper); overflow: hidden; text-align: center; padding-top: 22px; }
+.c-foot__links { display: flex; justify-content: center; gap: 20px; font-size: 12px; opacity: 0.75; flex-wrap: wrap; }
+.c-foot__word { font: 400 clamp(4.2rem, 21vw, 17rem)/0.8 var(--font-display); letter-spacing: -0.04em; margin-top: 14px; transform: translateY(16%); color: oklch(90% 0.03 70); user-select: none; }
+.dir-c .panel h2 { font: 500 20px/1.3 var(--font-display); letter-spacing: -0.01em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .seg button { transition: none; }
+  .btn:active { transform: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="switcher" role="tablist" aria-label="Dirección visual">
+  <div class="switcher__inner">
+    <span class="switcher__title">LendLoop · 3 direcciones</span>
+    <div class="seg">
+      <button role="tab" data-tab="a" aria-selected="true">A · Calma</button>
+      <button role="tab" data-tab="b" aria-selected="false">B · Ledger</button>
+      <button role="tab" data-tab="c" aria-selected="false">C · Vecinal</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== A ============================== -->
+<section class="dir dir-a" data-dir="a" aria-label="Dirección A">
+  <div class="info">
+    <h2>A · Calma de producto</h2>
+    <p>Hero de Integrated Biosciences (mesh orgánico contenido en panel, no fondo oscuro), nav pill de Supaste, inbox de Cal.com, footer con wordmark recortado tipo Decimals. Lo disponible ES el visual del hero: datos reales, no screenshot falso.</p>
+    <dl>
+      <dt>Paleta</dt><dd><div class="swatches"><span style="background:oklch(98.6% 0.004 160)"></span><span style="background:oklch(21% 0.018 165)"></span><span style="background:oklch(44% 0.085 165)"></span><span style="background:oklch(94.5% 0.03 165)"></span><span style="background:oklch(55% 0.17 32)"></span></div></dd>
+      <dt>Tipo</dt><dd>Host Grotesk (display + UI) · Fragment Mono (fechas, IDs)</dd>
+      <dt>Shader</dt><dd>Paper MeshGradient salvia, speed 0.12, estático con reduced-motion</dd>
+      <dt>Libs</dt><dd>Magic UI BlurFade, NumberTicker, AnimatedList · React Bits SplitText (tagline)</dd>
+    </dl>
+    <span class="verdict">Recomendada: confianza tipo salud sin parecer clínica</span>
+  </div>
+
+  <div class="section-label">Landing pública</div>
+  <div class="frame"><div class="site">
+    <div class="a-top">
+      <nav class="a-nav" aria-label="Principal">
+        <a class="brand" href="#"><span class="brand-mark" aria-hidden="true"></span>LendLoop</a>
+        <div class="a-nav__links"><a href="#">Tools</a><a href="#">How it works</a></div>
+        <a class="btn btn-primary btn-sm" href="#">Sign in</a>
+      </nav>
+    </div>
+    <div class="a-hero">
+      <div class="shader-host" id="shader-a" aria-hidden="true"></div>
+      <div class="a-hero__grid">
+        <div>
+          <h1>Borrow what you need. <span>Lend what you don't.</span></h1>
+          <p>A lending board for your street. List a tool in a minute, borrow one by the day.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="#">Sign in to lend or borrow <span class="chip-arrow"><i class="ph ph-arrow-right"></i></span></a>
+            <a class="text-link" href="#">See what's available</a>
+          </div>
+        </div>
+        <aside class="avail" aria-label="Available now">
+          <header><span>Available now</span><span class="mono">8 tools</span></header>
+          <ul>
+            <li><i class="ph ph-wrench lead"></i><span class="name">Cordless drill</span><span class="cat">Power tools</span></li>
+            <li><i class="ph ph-plant lead"></i><span class="name">Telescopic hedge trimmer</span><span class="cat">Garden</span></li>
+            <li><i class="ph ph-tent lead"></i><span class="name">Four-person dome tent</span><span class="cat">Camping</span></li>
+            <li><i class="ph ph-cooking-pot lead"></i><span class="name">Stand mixer</span><span class="cat">Kitchen</span></li>
+            <li><i class="ph ph-ladder lead"></i><span class="name">Folding ladder, 3 m</span><span class="cat">Ladders</span></li>
+          </ul>
+          <footer><i class="ph ph-lock-simple"></i>Owner details stay private.</footer>
+        </aside>
+      </div>
+    </div>
+    <div class="section-label" style="margin-top:28px">App autenticada (fragmento)</div>
+    <div class="app">
+      <div class="app__grid">
+        <div class="panel tool-card">
+          <div class="tool-card__top">
+            <span class="icon-tile"><i class="ph ph-wrench"></i></span>
+            <div class="tool-card__title"><h2>Cordless drill</h2><div class="tool-card__meta">Power tools · Good condition</div></div>
+            <span class="badge b-returned">Available</span>
+          </div>
+          <div class="booked"><span>Booked Nov 18 to 20</span><span>Booked Nov 27 to 29</span></div>
+          <button class="btn btn-primary" style="justify-content:center">Request dates</button>
+          <div class="owner"><span class="avatar">MR</span>Marta R.<span class="trusted"><i class="ph-fill ph-seal-check"></i>Trusted lender</span></div>
+        </div>
+        <div class="panel">
+          <div class="loan-head">
+            <div><h2>Cordless drill</h2><p class="mono">Nov 8 to Nov 12</p></div>
+            <span class="badge b-overdue"><i class="ph ph-clock-countdown"></i>Overdue 3 days</span>
+          </div>
+          <ol class="tl">
+            <li><span class="dot"><i class="ph ph-paper-plane-tilt"></i></span><span class="what">You requested Nov 8 to 12</span><span class="when">Nov 6</span></li>
+            <li><span class="dot dot--auto"><i class="ph ph-envelope-simple"></i></span><span class="what">Email delivered to Marta<small>Automation · n8n</small></span><span class="when">Nov 6</span></li>
+            <li><span class="dot"><i class="ph ph-check"></i></span><span class="what">Marta approved</span><span class="when">Nov 6</span></li>
+            <li><span class="dot"><i class="ph ph-hand-arrow-down"></i></span><span class="what">Handed over</span><span class="when">Nov 8</span></li>
+            <li><span class="dot dot--warn"><i class="ph ph-bell-ringing"></i></span><span class="what">Reminder sent to you<small>Automation · n8n</small></span><span class="when">2 days ago</span></li>
+            <li class="is-next"><span class="dot dot--next"></span><span class="what">Marta confirms the return</span><span class="when">next</span></li>
+          </ol>
+        </div>
+      </div>
+      <div class="badges">
+        <span class="badge b-requested">Requested</span><span class="badge b-approved">Approved</span><span class="badge b-active">Handed over</span><span class="badge b-returned">Returned</span><span class="badge b-closed">Declined</span><span class="badge b-closed">Cancelled</span><span class="badge b-overdue">Overdue</span>
+      </div>
+    </div>
+    <footer class="a-foot">
+      <div class="a-foot__links"><a href="#">How it works</a><a href="#">Privacy</a><a href="#">Security</a><a href="#">GitHub</a></div>
+      <div class="a-foot__word" aria-hidden="true">LendLoop</div>
+    </footer>
+  </div></div>
+</section>
+
+<!-- ============================== B ============================== -->
+<section class="dir dir-b" data-dir="b" aria-label="Dirección B">
+  <div class="info">
+    <h2>B · Ledger preciso</h2>
+    <p>Precisión de Zed (atajos de teclado en botones, hairlines), densidad de Linear/Stripe. La lista pública es un registro tipo catálogo. Shader de dithering como banda fina, no como protagonista.</p>
+    <dl>
+      <dt>Paleta</dt><dd><div class="swatches"><span style="background:oklch(99.3% 0.002 260)"></span><span style="background:oklch(19% 0.012 262)"></span><span style="background:oklch(50% 0.19 263)"></span><span style="background:oklch(95% 0.03 263)"></span><span style="background:oklch(56% 0.19 25)"></span></div></dd>
+      <dt>Tipo</dt><dd>IBM Plex Sans + IBM Plex Mono</dd>
+      <dt>Shader</dt><dd>Paper Dithering (warp, 4x4) cobalto en banda</dd>
+      <dt>Libs</dt><dd>Magic UI NumberTicker · Aceternity Stateful Button · shadcn Table</dd>
+    </dl>
+    <span class="verdict verdict--risk">Muy pro para admin; en landing se siente herramienta dev, poco vecinal</span>
+  </div>
+
+  <div class="section-label">Landing pública</div>
+  <div class="frame"><div class="site">
+    <nav class="b-nav" aria-label="Principal">
+      <a class="brand" href="#"><span class="brand-mark" aria-hidden="true"></span>LendLoop</a>
+      <div class="b-nav__links"><a href="#">Tools</a><a href="#">How it works</a><a href="#">Security</a></div>
+      <a class="btn btn-ghost btn-sm" href="#">Sign in <kbd>S</kbd></a>
+    </nav>
+    <div class="b-hero">
+      <h1>Borrow what you need. Lend what you don't.</h1>
+      <p>A lending board for your street. Every request, handover and return on the record.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#">Sign in to lend or borrow <kbd>S</kbd></a>
+        <a class="btn btn-ghost" href="#">Browse tools <kbd>B</kbd></a>
+      </div>
+    </div>
+    <div class="b-band"><div class="shader-host" id="shader-b" aria-hidden="true"></div></div>
+    <div class="b-ledger">
+      <div class="b-ledger__head"><span><strong>8</strong> tools available right now</span><span class="mono">updated live</span></div>
+      <table>
+        <thead><tr><th>No.</th><th>Tool</th><th>Category</th></tr></thead>
+        <tbody>
+          <tr><td class="no">014</td><td>Cordless drill</td><td class="cat">Power tools</td></tr>
+          <tr><td class="no">015</td><td>Telescopic hedge trimmer</td><td class="cat">Garden</td></tr>
+          <tr><td class="no">016</td><td>Four-person dome tent</td><td class="cat">Camping</td></tr>
+          <tr><td class="no">017</td><td>Stand mixer</td><td class="cat">Kitchen</td></tr>
+          <tr><td class="no">018</td><td>Folding ladder, 3 m</td><td class="cat">Ladders</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="section-label">App autenticada (fragmento)</div>
+    <div class="app">
+      <div class="app__grid">
+        <div class="panel">
+          <h2>Incoming requests</h2>
+          <div class="tabs-b"><span class="on">Needs action<em>2</em></span><span>Upcoming</span><span>Past</span></div>
+          <div class="inbox-row">
+            <span class="avatar">AL</span>
+            <div><div class="line"><strong>Ana L.</strong> wants your Cordless drill</div><div class="sub">Nov 18 to Nov 20 · 3 days</div>
+              <div class="acts"><button class="btn btn-primary btn-sm">Approve</button><button class="btn btn-ghost btn-sm">Decline</button></div></div>
+          </div>
+          <div class="inbox-row">
+            <span class="avatar">JP</span>
+            <div><div class="line"><strong>Joaquín P.</strong> wants your Cordless drill</div><div class="sub">Nov 19 to Nov 21 · 3 days</div>
+              <div class="acts"><span class="warn-note"><i class="ph ph-warning"></i>Overlaps Ana's dates. Approving Ana declines this.</span></div></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="loan-head">
+            <div><h2>Cordless drill</h2><p class="mono">Nov 8 to Nov 12</p></div>
+            <span class="badge b-overdue">Overdue 3 days</span>
+          </div>
+          <ol class="tl">
+            <li><span class="dot"><i class="ph ph-paper-plane-tilt"></i></span><span class="what">You requested Nov 8 to 12</span><span class="when">11-06 09:14</span></li>
+            <li><span class="dot dot--auto"><i class="ph ph-envelope-simple"></i></span><span class="what">Email delivered to Marta<small>evt_8f2c · n8n</small></span><span class="when">11-06 09:15</span></li>
+            <li><span class="dot"><i class="ph ph-check"></i></span><span class="what">Marta approved</span><span class="when">11-06 11:02</span></li>
+            <li><span class="dot dot--warn"><i class="ph ph-bell-ringing"></i></span><span class="what">Reminder sent to you<small>rem_2611 · n8n</small></span><span class="when">2 days ago</span></li>
+          </ol>
+        </div>
+      </div>
+      <div class="badges">
+        <span class="badge b-requested">Requested</span><span class="badge b-approved">Approved</span><span class="badge b-active">Handed over</span><span class="badge b-returned">Returned</span><span class="badge b-closed">Declined</span><span class="badge b-closed">Cancelled</span><span class="badge b-overdue">Overdue</span>
+      </div>
+    </div>
+    <footer class="b-foot">
+      <span>LendLoop</span>
+      <nav><a href="#">How it works</a><a href="#">Privacy</a><a href="#">Security</a><a href="#">GitHub</a></nav>
+    </footer>
+  </div></div>
+</section>
+
+<!-- ============================== C ============================== -->
+<section class="dir dir-c" data-dir="c" aria-label="Dirección C">
+  <div class="info">
+    <h2>C · Editorial vecinal</h2>
+    <p>Paleta cálida tipo Claude, tagline como cabecera de periódico, lista indexada, footer Decimals. Ventana en arco con grano (puerta de casa) como único shader.</p>
+    <dl>
+      <dt>Paleta</dt><dd><div class="swatches"><span style="background:oklch(97.4% 0.01 80)"></span><span style="background:oklch(23% 0.02 55)"></span><span style="background:oklch(56% 0.13 40)"></span><span style="background:oklch(93.5% 0.035 45)"></span><span style="background:oklch(52% 0.16 28)"></span></div></dd>
+      <dt>Tipo</dt><dd>Newsreader (display, roman) · Hanken Grotesk (UI) · Fragment Mono</dd>
+      <dt>Shader</dt><dd>Paper GrainGradient (blob) cálido dentro del arco</dd>
+      <dt>Libs</dt><dd>React Bits SplitText · Magic UI BlurFade, Marquee</dd>
+    </dl>
+    <span class="verdict verdict--risk">Más cálida y memorable; riesgo: crema + terracota es la paleta "default IA" de marcas artesanales</span>
+  </div>
+
+  <div class="section-label">Landing pública</div>
+  <div class="frame"><div class="site">
+    <nav class="c-nav" aria-label="Principal">
+      <a class="brand" href="#">LendLoop</a>
+      <div class="c-nav__links"><a href="#">Tools</a><a href="#">How it works</a></div>
+      <a class="btn btn-primary btn-sm" href="#">Sign in</a>
+    </nav>
+    <div class="c-hero">
+      <div>
+        <h1>Borrow what you need. Lend what you don't.</h1>
+        <p>A lending board for your street. List a tool in a minute, borrow one by the day.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#">Sign in to lend or borrow</a>
+          <a class="text-link" href="#">See what's available</a>
+        </div>
+      </div>
+      <div class="c-arch"><div class="shader-host" id="shader-c" aria-hidden="true"></div></div>
+    </div>
+    <div class="c-list__head"><span>Available now</span><span class="mono">8 tools</span></div>
+    <div class="c-list">
+      <div><span class="no">01</span><span class="name">Cordless drill</span><span class="cat">Power tools</span></div>
+      <div><span class="no">02</span><span class="name">Telescopic hedge trimmer</span><span class="cat">Garden</span></div>
+      <div><span class="no">03</span><span class="name">Four-person dome tent</span><span class="cat">Camping</span></div>
+      <div><span class="no">04</span><span class="name">Stand mixer</span><span class="cat">Kitchen</span></div>
+      <div><span class="no">05</span><span class="name">Folding ladder, 3 m</span><span class="cat">Ladders</span></div>
+      <div><span class="no">06</span><span class="name">Pressure washer</span><span class="cat">Cleaning</span></div>
+    </div>
+    <div class="section-label">App autenticada (fragmento)</div>
+    <div class="app">
+      <div class="app__grid">
+        <div class="panel tool-card">
+          <div class="tool-card__top">
+            <span class="icon-tile"><i class="ph ph-wrench"></i></span>
+            <div class="tool-card__title"><h2>Cordless drill</h2><div class="tool-card__meta">Power tools · Good condition</div></div>
+            <span class="badge b-returned">Available</span>
+          </div>
+          <div class="booked"><span>Booked Nov 18 to 20</span><span>Booked Nov 27 to 29</span></div>
+          <button class="btn btn-primary" style="justify-content:center">Request dates</button>
+          <div class="owner"><span class="avatar">MR</span>Marta R.<span class="trusted"><i class="ph-fill ph-seal-check"></i>Trusted lender</span></div>
+        </div>
+        <div class="panel">
+          <div class="loan-head">
+            <div><h2>Cordless drill</h2><p class="mono">Nov 8 to Nov 12</p></div>
+            <span class="badge b-overdue">Overdue 3 days</span>
+          </div>
+          <ol class="tl">
+            <li><span class="dot"><i class="ph ph-paper-plane-tilt"></i></span><span class="what">You requested Nov 8 to 12</span><span class="when">Nov 6</span></li>
+            <li><span class="dot dot--auto"><i class="ph ph-envelope-simple"></i></span><span class="what">Email delivered to Marta<small>Automation</small></span><span class="when">Nov 6</span></li>
+            <li><span class="dot"><i class="ph ph-check"></i></span><span class="what">Marta approved</span><span class="when">Nov 6</span></li>
+            <li><span class="dot dot--warn"><i class="ph ph-bell-ringing"></i></span><span class="what">Reminder sent to you<small>Automation</small></span><span class="when">2 days ago</span></li>
+          </ol>
+        </div>
+      </div>
+      <div class="badges">
+        <span class="badge b-requested">Requested</span><span class="badge b-approved">Approved</span><span class="badge b-active">Handed over</span><span class="badge b-returned">Returned</span><span class="badge b-closed">Declined</span><span class="badge b-closed">Cancelled</span><span class="badge b-overdue">Overdue</span>
+      </div>
+    </div>
+    <footer class="c-foot">
+      <div class="c-foot__links"><a href="#">How it works</a><a href="#">Privacy</a><a href="#">Security</a><a href="#">GitHub</a></div>
+      <div class="c-foot__word" aria-hidden="true">LendLoop</div>
+    </footer>
+  </div></div>
+</section>
+
+<script>
+  // tab switcher (mockup chrome)
+  const tabs = document.querySelectorAll('[data-tab]');
+  tabs.forEach((t) => t.addEventListener('click', () => {
+    document.documentElement.dataset.active = t.dataset.tab;
+    tabs.forEach((x) => x.setAttribute('aria-selected', String(x === t)));
+    window.scrollTo({ top: 0 });
+  }));
+</script>
+<script type="module">
+  // Real Paper Shaders (same package the app will use). CSS gradient stays underneath as fallback.
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  try {
+    const React = (await import('https://esm.sh/react@19.1.0')).default;
+    const { createRoot } = await import('https://esm.sh/react-dom@19.1.0/client?deps=react@19.1.0');
+    const S = await import('https://esm.sh/@paper-design/shaders-react@0.0.82?deps=react@19.1.0');
+    const mount = (id, Comp, props) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      createRoot(el).render(React.createElement(Comp, {
+        ...props,
+        speed: reduce ? 0 : props.speed,
+        minPixelRatio: 1,
+        style: { width: '100%', height: '100%' },
+      }));
+    };
+    mount('shader-a', S.MeshGradient, {
+      colors: ['#eef4ef', '#c7dfd1', '#97c0ab', '#f5f2ea', '#5f9a82'],
+      distortion: 0.55, swirl: 0.35, grainMixer: 0.08, grainOverlay: 0.12, speed: 0.12,
+    });
+    mount('shader-b', S.Dithering, {
+      colorBack: '#fbfcff', colorFront: '#3d5bd9', shape: 'warp', type: '4x4', size: 2.5, speed: 0.25,
+    });
+    mount('shader-c', S.GrainGradient, {
+      colorBack: '#eadcc6', colors: ['#c4613f', '#e39a6c', '#f2c9a0'], softness: 0.55, intensity: 0.75, noise: 0.35, shape: 'blob', speed: 0.2,
+    });
+  } catch (err) {
+    console.warn('Shaders unavailable, showing CSS fallback', err);
+  }
+</script>
+</body>
+</html>

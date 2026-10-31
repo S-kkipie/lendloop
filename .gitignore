@@ -1,0 +1,33 @@
+# dependencies
+node_modules/
+
+# env and secrets (never commit)
+.env
+.env.*
+!.env.example
+n8n/.env
+n8n/.credentials.tmp.json
+
+# build output
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# convex local deployment state
+.convex/
+
+# test artifacts
+playwright-report/
+test-results/
+
+# local tool caches
+.impeccable/
+.playwright-mcp/
+.hallmark/preflight.json
+
+# os / editor
+.DS_Store
+*.log
