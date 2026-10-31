@@ -4,7 +4,7 @@ import { ArrowRightIcon, PencilSimpleIcon, PlusIcon, TagIcon, TrashIcon } from "
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import Link from "next/link";
-import { useId } from "react";
+import { useId, useRef } from "react";
 import { api } from "@/convex/_generated/api";
 import { BoardHeader } from "@/components/loans/LoanBoard";
 import { EmptyState } from "@/components/shell/EmptyState";
@@ -80,6 +80,8 @@ function plural(count: number, word: string): string {
 
 function ListingRow({ tool }: { tool: Listing }) {
   const nameId = useId();
+  // The Remove button leaves with the listing; focus lands on its name instead.
+  const nameRef = useRef<HTMLAnchorElement>(null);
   const removed = tool.status === "removed";
   const blockedReason =
     !removed && !tool.canDelete && tool.availability.state === "on_loan"
@@ -105,6 +107,7 @@ function ListingRow({ tool }: { tool: Listing }) {
       <div className="col-start-1 row-start-1 grid min-w-0 content-start">
         <Link
           id={nameId}
+          ref={nameRef}
           href={`/tools/${tool._id}`}
           className="w-fit max-w-full rounded-sm text-[0.9375rem] leading-6 font-medium [overflow-wrap:anywhere] underline-offset-4 hover:underline"
         >
@@ -172,7 +175,12 @@ function ListingRow({ tool }: { tool: Listing }) {
               <TooltipContent>{blockedReason}. You can remove it once it&apos;s back.</TooltipContent>
             </Tooltip>
           ) : (
-            <RemoveListingDialog toolId={tool._id} toolName={tool.name} trigger={removeButton} />
+            <RemoveListingDialog
+              toolId={tool._id}
+              toolName={tool.name}
+              trigger={removeButton}
+              focusAfterRemove={nameRef}
+            />
           )}
         </div>
       )}

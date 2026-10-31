@@ -3,6 +3,8 @@
  * Landing (app/(public)): macrostructure: Index-First (the live register is the page's spine) · nav: N1a
  *   (two in-page anchors + sign in) · footer: Ft2 inline line · enrichment: Paper Dithering band (Tier D)
  * Landing pre-emit critique: P4 H5 E4 S4 R5 V4
+ * Admin console (app/(app)/admin): operate mode · stat strip (numbers only) over URL-synced tabs of
+ *   ledger tables (ARIA table semantics) · pre-emit critique: P4 H5 E4 S4 R4 V4
  * Single light theme (user decision 2026-10-31). Source of truth for every colour,
  * radius, shadow and motion token. See DESIGN.md.
  */

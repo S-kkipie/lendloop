@@ -189,7 +189,8 @@ table above passes WCAG AA (checked with a script against the CSS file).
   `hover:` variant is redefined in globals.css).
 - Reduced motion keeps opacity and drops movement; skeleton pulse stops.
 - `NumberTicker` counts once on first paint (600 ms, `--ease-out`); live
-  updates jump to the new value. The real number is always in the a11y tree.
+  updates jump to the new value, and a page opened in a hidden tab shows the
+  number without counting. The real number is always in the a11y tree.
 - Focus ring: 2 px `--ring` outline, offset 2 px (1 px on fields, inset on menu
   items), appears instantly, never transitioned. Tailwind v4's
   `transition-colors` includes `outline-color`, so use

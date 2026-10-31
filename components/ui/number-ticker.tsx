@@ -8,7 +8,9 @@ import { cn } from "cn"
 // - counts up once, on first paint; later (live) value changes jump straight
 //   to the new number, so a realtime update never replays the animation
 // - 600 ms with the system's --ease-out curve instead of a long spring
-// - no counting under prefers-reduced-motion
+// - no counting under prefers-reduced-motion, or in a tab nobody is looking
+//   at (requestAnimationFrame is paused there, so the count would sit on a
+//   wrong number until the tab is shown)
 // - the animated digits are aria-hidden; the real value is always readable
 // - tabular figures and a fixed minimum width, so the text after it never shifts
 
@@ -40,7 +42,7 @@ export function NumberTicker({
   useEffect(() => {
     const node = ref.current
     if (!node) return
-    if (played.current || reduceMotion) {
+    if (played.current || reduceMotion || document.visibilityState === "hidden") {
       played.current = true
       node.textContent = format(value)
       return

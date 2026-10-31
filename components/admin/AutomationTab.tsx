@@ -11,7 +11,7 @@ import { useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { cn } from "cn";
 import Link from "next/link";
-import { useId, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -69,6 +69,7 @@ function ReplayButton({ problem, now }: { problem: Problem; now: number }) {
   const replay = useMutation(api.admin.replayEvent);
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const cancelRef = useRef<HTMLButtonElement>(null);
   const label = EVENT_LABEL[problem.type];
 
   async function run() {
@@ -87,37 +88,43 @@ function ReplayButton({ problem, now }: { problem: Problem; now: number }) {
     }
   }
 
+  const replayed = problem.replayedAt !== null;
   const button = (
-    <Button
-      data-row-action=""
-      size="sm"
-      variant={problem.replayedAt === null ? "default" : "outline"}
-      aria-busy={busy || undefined}
-      onClick={problem.replayedAt === null ? run : undefined}
-    >
+    <Button data-row-action="" size="sm" variant={replayed ? "outline" : "default"} aria-busy={busy || undefined}>
       <ArrowCounterClockwiseIcon aria-hidden="true" />
-      {problem.replayedAt === null ? "Replay" : "Replay again"}
-      <span className="sr-only"> the {label} notification</span>
+      {replayed ? "Replay again" : "Replay"}
+      <span className="sr-only">
+        {" "}
+        the {label} notification{problem.loanId ? ` for loan ending ${problem.loanId.slice(-6)}` : ""}
+      </span>
     </Button>
   );
 
-  if (problem.replayedAt === null) return button;
-
-  // Each replay is a new event that n8n does not dedupe: a second replay can
-  // send the email twice, so it asks first.
+  // One tree for both states, so the button keeps keyboard focus when it turns
+  // into "Replay again". The first replay runs at once; a second one asks
+  // first, because each replay is a new event that n8n does not dedupe.
   return (
-    <AlertDialog open={confirming} onOpenChange={(next) => !busy && setConfirming(next)}>
+    <AlertDialog
+      open={confirming}
+      onOpenChange={(next) => {
+        if (busy) return;
+        if (next && !replayed) void run();
+        else setConfirming(next);
+      }}
+    >
       <AlertDialogTrigger render={button} />
-      <AlertDialogContent size="sm">
+      <AlertDialogContent size="sm" initialFocus={cancelRef}>
         <AlertDialogHeader>
           <AlertDialogTitle>Replay this again?</AlertDialogTitle>
           <AlertDialogDescription>
-            It was replayed {relativeTime(problem.replayedAt, now)}. If that replay got through, the recipient gets the
+            It was replayed {relativeTime(problem.replayedAt ?? now, now)}. If that replay got through, the recipient gets the
             email twice. Check the loan&apos;s timeline first.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>Don&apos;t replay</AlertDialogCancel>
+          <AlertDialogCancel ref={cancelRef} disabled={busy}>
+            Don&apos;t replay
+          </AlertDialogCancel>
           <Button onClick={run} aria-busy={busy || undefined}>
             {busy ? "Replaying…" : "Replay again"}
           </Button>
@@ -232,7 +239,7 @@ function ResolveButton({ error }: { error: AutomationError }) {
       }}
     >
       <CheckIcon aria-hidden="true" />
-      Resolve<span className="sr-only"> the {error.workflow} error</span>
+      Resolve<span className="sr-only"> the {error.workflow} error from execution {error.executionId}</span>
     </Button>
   );
 }

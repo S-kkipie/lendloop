@@ -188,7 +188,15 @@ export function BrowseTools() {
             />
             <InputGroupAddon align="inline-end">
               {query ? (
-                <InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => setQuery("")}>
+                <InputGroupButton
+                  size="icon-xs"
+                  aria-label="Clear search"
+                  onClick={() => {
+                    // The button goes away with the text; keep focus in the field.
+                    setQuery("");
+                    searchRef.current?.focus();
+                  }}
+                >
                   <XIcon aria-hidden="true" />
                 </InputGroupButton>
               ) : (

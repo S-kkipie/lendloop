@@ -110,6 +110,7 @@ function DelayedSpinner() {
 function ActionButton({
   icon: IconComponent,
   label,
+  subject,
   primary,
   busy,
   disabledReason,
@@ -117,6 +118,8 @@ function ActionButton({
 }: {
   icon: Icon;
   label: ReactNode;
+  /** Which loan, for screen readers: rows repeat the same buttons ("Approve"). */
+  subject: string;
   primary?: boolean;
   busy: boolean;
   disabledReason?: string | null;
@@ -140,6 +143,7 @@ function ActionButton({
       )}
       {/* One flex item, so the button's gap never splits "Hand over · starts Nov 18". */}
       <span>{label}</span>
+      <span className="sr-only">: {subject}</span>
     </Button>
   );
   if (!disabledReason) return button;
@@ -191,6 +195,7 @@ export function LoanActions({ loan, viewer, overlap, trailing, className }: Loan
   const owner = firstName(loan.owner.displayName);
   const counterpart = viewer === "owner" ? borrower : owner;
   const tool = inSentence(loan.tool.name);
+  const subject = `${loan.tool.name}, ${viewer === "owner" ? loan.borrower.displayName : loan.owner.displayName}`;
   const dates = formatRange(loan.startDate, loan.endDate);
   const today = serverToday();
   const ended = today > loan.endDate;
@@ -253,12 +258,12 @@ export function LoanActions({ loan, viewer, overlap, trailing, className }: Loan
     switch (action) {
       case "decline":
         buttons.push(
-          <ActionButton key={action} icon={XIcon} label="Decline" busy={isBusy} onClick={() => run("decline")} />,
+          <ActionButton subject={subject} key={action} icon={XIcon} label="Decline" busy={isBusy} onClick={() => run("decline")} />,
         );
         break;
       case "approve":
         buttons.push(
-          <ActionButton
+          <ActionButton subject={subject}
             key={action}
             icon={CheckIcon}
             label="Approve"
@@ -284,7 +289,7 @@ export function LoanActions({ loan, viewer, overlap, trailing, className }: Loan
       case "cancel": {
         const booked = loan.status === "approved";
         buttons.push(
-          <ActionButton
+          <ActionButton subject={subject}
             key={action}
             icon={ProhibitIcon}
             label={booked ? "Cancel booking" : "Cancel request"}
@@ -309,7 +314,7 @@ export function LoanActions({ loan, viewer, overlap, trailing, className }: Loan
       case "handOver": {
         const upcoming = loan.startDate > today;
         buttons.push(
-          <ActionButton
+          <ActionButton subject={subject}
             key={action}
             icon={HandshakeIcon}
             label={
@@ -332,7 +337,7 @@ export function LoanActions({ loan, viewer, overlap, trailing, className }: Loan
       }
       case "markReturned":
         buttons.push(
-          <ActionButton
+          <ActionButton subject={subject}
             key={action}
             icon={ArrowUUpLeftIcon}
             label="Mark returned"
