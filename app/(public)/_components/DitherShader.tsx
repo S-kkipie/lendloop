@@ -4,7 +4,10 @@ import { Dithering } from "@paper-design/shaders-react";
 import { useReducedMotion } from "motion/react";
 import { useState } from "react";
 
-const SPEED = 0.25;
+// Quiet by design: light cobalt ink, fine 1.5 px cells and a slow drift, so the
+// band reads as texture under the headline rather than competing with it.
+const SPEED = 0.12;
+const CELL_SIZE = 1.5;
 
 /**
  * Resolves a colour token (an OKLCH value in globals.css) to the rgb() string
@@ -22,7 +25,7 @@ function readToken(name: string): string | null {
 }
 
 /**
- * Paper Dithering, cobalt on paper. The shader pauses itself while it is off
+ * Paper Dithering, light cobalt on paper. The shader pauses itself while it is off
  * screen or the tab is hidden (its own IntersectionObserver and
  * visibilitychange listener); under reduced motion, or when the visitor pauses
  * it, it holds the current frame (speed 0 also stops its animation loop).
@@ -30,7 +33,7 @@ function readToken(name: string): string | null {
 export function DitherShader({ paused = false }: { paused?: boolean }) {
   const reduceMotion = useReducedMotion();
   // Client-only component (next/dynamic, ssr: false): the DOM is available here.
-  const [colors] = useState(() => ({ back: readToken("--background"), front: readToken("--primary") }));
+  const [colors] = useState(() => ({ back: readToken("--background"), front: readToken("--band-ink") }));
   if (!colors.back || !colors.front) return null;
 
   return (
@@ -40,7 +43,7 @@ export function DitherShader({ paused = false }: { paused?: boolean }) {
       colorFront={colors.front}
       shape="warp"
       type="4x4"
-      size={2.5}
+      size={CELL_SIZE}
       speed={reduceMotion || paused ? 0 : SPEED}
       minPixelRatio={1}
       width="100%"

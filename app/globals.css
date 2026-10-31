@@ -130,7 +130,9 @@
   --danger-soft: oklch(95.5% 0.03 25);
   --danger-ink: oklch(48% 0.17 25);
 
-  /* Middle stop of the landing band's static fallback (cobalt, hue 263). */
+  /* Landing band: the Dithering ink is a light cobalt, quiet next to the
+   * headline; the static fallback's middle stop sits between it and paper. */
+  --band-ink: oklch(72% 0.11 263);
   --band-mid: oklch(88% 0.07 263);
 
   --skeleton: oklch(94.5% 0.005 262);

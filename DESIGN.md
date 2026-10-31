@@ -119,10 +119,11 @@ table above passes WCAG AA (checked with a script against the CSS file).
   hanging from it (first 10 rows, then a "N more" row), How it works as
   numbered ledger rows with the app's own status badges, the data promise as
   one framed panel of rows, a one-line mono footer.
-- The band: Paper `Dithering` (warp, 4x4, size 2.5, speed 0.25), colours read
-  from `--background` / `--primary` at runtime, CSS fallback `.dither-fallback`
-  underneath, its own pause toggle (WCAG 2.2.2), a still frame under reduced
-  motion. Repository links appear only when `NEXT_PUBLIC_REPO_URL` is set.
+- The band: Paper `Dithering` (warp, 4x4, size 1.5, speed 0.12), colours read
+  from `--background` / `--band-ink` (a light cobalt, `oklch(72% 0.11 263)`) at
+  runtime, so it reads as texture and the headline stays dominant. CSS fallback
+  `.dither-fallback` underneath, its own pause toggle (WCAG 2.2.2), a still
+  frame under reduced motion, paused off-screen. Repository links appear only when `NEXT_PUBLIC_REPO_URL` is set.
 
 ## Motion (Emil Kowalski rules)
 
