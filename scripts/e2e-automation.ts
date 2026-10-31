@@ -1,7 +1,9 @@
 // End-to-end check of the automation loop against the local stack. Requires
-// `pnpm dev:convex` (Convex local deployment) and `pnpm stack:up` (n8n,
-// Postgres, Mailpit). Prints a PASS/FAIL table and exits 1 on any failure.
-// Never prints secrets or full email addresses.
+// `pnpm dev:convex` (Convex local deployment with ALLOW_DEV_TOOLS=true) and
+// `pnpm stack:up` (n8n, Postgres, Mailpit). Prints a PASS/FAIL table and exits
+// 1 on any failure. Never prints secrets or full email addresses. Whatever the
+// outcome, it removes the users, tools and loans it created (devtools:purgeE2E),
+// so repeated runs don't pile up in the demo data.
 import { spawnSync } from "node:child_process";
 import { createHmac, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -257,9 +259,31 @@ async function main() {
   if (failureErrorId) convex("admin:resolveError", { errorId: failureErrorId }, admin);
 }
 
+// Every run creates fresh e2e_* users; delete them and everything they touched,
+// also when a step failed. Leaves the seed data and real accounts alone.
+function cleanUp(): void {
+  try {
+    const purged = convex("devtools:purgeE2E") as Record<string, number>;
+    const summary = Object.entries(purged)
+      .map(([table, count]) => `${table} ${count}`)
+      .join(", ");
+    record("clean up E2E data", true, summary);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    record(
+      "clean up E2E data",
+      false,
+      /ALLOW_DEV_TOOLS/.test(reason)
+        ? "dev tools are off: run `pnpm exec convex env set ALLOW_DEV_TOOLS true` on the local deployment"
+        : reason,
+    );
+  }
+}
+
 main()
   .catch((error: unknown) => record("unexpected error", false, error instanceof Error ? error.message : String(error)))
   .finally(() => {
+    cleanUp();
     const width = Math.max(...results.map((r) => r.step.length));
     console.log(`\n${"Result".padEnd(6)}  ${"Step".padEnd(width)}  Detail`);
     for (const r of results) console.log(`${(r.ok ? "PASS" : "FAIL").padEnd(6)}  ${r.step.padEnd(width)}  ${r.detail}`);

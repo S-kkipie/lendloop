@@ -18,6 +18,7 @@
     "stack:up": "docker compose --env-file n8n/.env up -d --build",
     "stack:down": "docker compose --env-file n8n/.env down",
     "seed": "convex run seed:demo",
+    "db:reset-demo": "convex run devtools:resetDemo",
     "e2e:automation": "tsx scripts/e2e-automation.ts"
   },
   "dependencies": {
