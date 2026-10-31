@@ -529,7 +529,7 @@ Clerk production instance with an owned domain; a secret manager with scheduled 
 
 | Spike | Fallback |
 |---|---|
-| Convex local deployment can `fetch` `http://localhost:5678` | run Convex self-hosted inside the compose network |
+| Convex local deployment can `fetch` `http://localhost:5678` **Result 2026-10-31: works (both `localhost` and `127.0.0.1` return 200)** | run Convex self-hosted inside the compose network |
 | n8n 2.x: Crypto node HMAC over the Raw Body; Code node constant-time compare without builtins; CLI activation of imported workflows; credential import from generated JSON; `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` breaks nothing; Remove Duplicates with workflow scope | Code node with `crypto` builtin allowlisted on task runners; REST API for activation |
 | Claiming the n8n owner account before a public instance is reachable | provision behind Railway private networking until the owner is set |
 | Clerk session-token claims (`role`, `email`, `name`) arrive on `ctx.auth.getUserIdentity()` | JWT template named `convex` with the same claims |
