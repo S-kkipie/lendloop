@@ -112,6 +112,15 @@ table above passes WCAG AA (checked with a script against the CSS file).
 - Live rows: an item that arrives after the first paint eases in once with
   `row-arrive` (200 ms, opacity + 4 px, `useArrivals`); never on first paint
   or on a tab switch.
+- Loan timeline (`/loans/[id]`, `Timeline`): a vertical rail with a legend.
+  Status changes are ink-ringed dots with the status glyph and a 500 title;
+  automation (emails, reminders) gets a cobalt-tinted dot with an envelope or
+  bell and a 400 title; failures read in danger ink and admins also see the
+  sanitized error while it applies. Times are relative ("12 min ago", ticking)
+  in mono with the exact time in a tooltip that also opens on focus. The next
+  expected step closes the rail as a dashed entry ("Marta confirms the
+  handover"). Copy lives in `lib/timeline.ts` (tested). When the status changes
+  live, the header badge fades in through a 2 px blur (`status-swap`, 180 ms).
 - Empty states (`components/shell/EmptyState`): dashed frame, small icon, why
   it is empty, and the action that fills it.
 - Icons: Phosphor only (`@phosphor-icons/react`), regular weight, `fill` for
@@ -157,7 +166,8 @@ table above passes WCAG AA (checked with a script against the CSS file).
   `motion-dialog` (centred), `motion-sheet` (slides from its side),
   `motion-fade` (backdrops), `motion-none` (keyboard-first surfaces),
   `blur-fade` (first-paint entrance, CSS keyframes so it runs before
-  hydration; `BlurFade` sets the 40 ms stagger index).
+  hydration; `BlurFade` sets the 40 ms stagger index), `row-arrive` (live
+  arrivals, 200 ms) and `status-swap` (live status change, 180 ms blur).
   They use Base UI `data-starting-style` / `data-ending-style`, so transitions
   are interruptible. Do not use tw-animate `animate-in` classes.
 - No animation on keyboard-triggered actions, the command palette or tab

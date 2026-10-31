@@ -51,11 +51,13 @@ test("timeline merges status changes and notifications, visible to parties and a
   await w.alice.as.mutation(api.loans.approve, { loanId });
 
   const view = await w.bob.as.query(api.loans.timeline, { loanId });
+  expect(view.viewer).toBe("borrower");
   expect(view.nextStep).toBe("handover");
   expect(view.entries.map((e) => e.kind)).toEqual(["status", "notification", "status", "notification"]);
   expect(view.entries[2]).toMatchObject({ kind: "status", action: "loan.approve", actor: "Alice M." });
   expect(view.entries[1]).toMatchObject({ kind: "notification", type: "loan.requested", recipient: "owner" });
 
-  await w.dana.as.query(api.loans.timeline, { loanId });
+  expect((await w.alice.as.query(api.loans.timeline, { loanId })).viewer).toBe("owner");
+  expect((await w.dana.as.query(api.loans.timeline, { loanId })).viewer).toBe("admin");
   await expectCode(w.carol.as.query(api.loans.timeline, { loanId }), "NOT_FOUND");
 });

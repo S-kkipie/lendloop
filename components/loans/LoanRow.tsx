@@ -33,9 +33,15 @@ function Note({ tone = "muted", children }: { tone?: "muted" | "warn" | "danger"
   );
 }
 
-function detailFor(loan: LoanRowData, viewer: "owner" | "borrower", overlap?: OverlapFacts): ReactNode[] {
+/** The notes under a loan: the borrower's message (owner only), overlap, overdue, why it closed. */
+export function loanNotes(
+  loan: LoanRowData,
+  viewer: "owner" | "borrower" | "admin",
+  overlap?: OverlapFacts,
+  { includeMessage = true }: { includeMessage?: boolean } = {},
+): ReactNode[] {
   const notes: ReactNode[] = [];
-  if (viewer === "owner" && loan.message) {
+  if (includeMessage && viewer === "owner" && loan.message) {
     notes.push(
       <p key="message" className="line-clamp-3 max-w-[65ch] text-[0.8125rem] leading-5 text-muted-foreground">
         <span className="sr-only">Message: </span>“{loan.message}”
@@ -92,7 +98,7 @@ interface LoanRowProps {
 export function LoanRow({ loan, viewer, overlap, arriving, onArrived }: LoanRowProps) {
   const nameId = useId();
   const person = viewer === "owner" ? loan.borrower.displayName : loan.owner.displayName;
-  const notes = detailFor(loan, viewer, overlap);
+  const notes = loanNotes(loan, viewer, overlap);
 
   return (
     <LedgerRow arriving={arriving} onArrived={onArrived} aria-labelledby={nameId}>

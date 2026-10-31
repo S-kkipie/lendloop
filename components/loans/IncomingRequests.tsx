@@ -3,16 +3,15 @@
 import { CalendarCheckIcon, ClockCounterClockwiseIcon, HandshakeIcon, PlusIcon, TrayIcon } from "@phosphor-icons/react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { rangesOverlap } from "@/convex/model/overlap";
 import { EmptyState } from "@/components/shell/EmptyState";
 import { Kbd } from "@/components/shell/Kbd";
 import { LedgerList } from "@/components/shell/LedgerList";
 import { ButtonLink } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isTerminal } from "@/convex/model/loanMachine";
-import type { OverlapFacts } from "./LoanActions";
 import { BoardHeader, BoardSkeleton, TabLabel, useTabParam } from "./LoanBoard";
 import { LOAN_COLUMNS, LoanRow, type LoanRowData } from "./LoanRow";
+import { overlapFacts } from "./overlap";
 import { useArrivals } from "./useArrivals";
 
 const TITLE = "Incoming";
@@ -24,18 +23,6 @@ type Tab = (typeof TABS)[number];
 
 export function IncomingSkeleton() {
   return <BoardSkeleton title={TITLE} description={DESCRIPTION} tabs={4} />;
-}
-
-/** For a pending request: how many other requests it overlaps, and whether its days are already booked. */
-function overlapFacts(loan: LoanRowData, all: readonly LoanRowData[]): OverlapFacts {
-  let pending = 0;
-  let booked = false;
-  for (const other of all) {
-    if (other._id === loan._id || other.tool._id !== loan.tool._id || !rangesOverlap(other, loan)) continue;
-    if (other.status === "pending") pending += 1;
-    if (other.status === "approved" || other.status === "active") booked = true;
-  }
-  return { pending, booked };
 }
 
 const byStart = (a: LoanRowData, b: LoanRowData) => a.startDate.localeCompare(b.startDate);

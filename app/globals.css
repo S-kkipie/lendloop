@@ -318,6 +318,12 @@
     animation: row-arrive 200ms var(--ease-out) both;
   }
 
+  /* A status that changes live (timeline header badge): the new state fades
+   * in through a 2 px blur, so the change reads as one object updating. */
+  .status-swap {
+    animation: status-swap 180ms var(--ease-out) both;
+  }
+
   /* Labels that swap in place (StatefulButton): crossfade with a 2 px blur so
    * the two labels read as one changing object. */
   .motion-swap {
@@ -356,6 +362,13 @@
 @keyframes fade-in {
   from {
     opacity: 0;
+  }
+}
+
+@keyframes status-swap {
+  from {
+    opacity: 0;
+    filter: blur(2px);
   }
 }
 
@@ -403,7 +416,8 @@ html:has([data-page="landing"]) {
     animation: none;
   }
   .blur-fade,
-  .row-arrive {
+  .row-arrive,
+  .status-swap {
     animation-name: fade-in;
   }
   .motion-swap[data-hidden="true"] {

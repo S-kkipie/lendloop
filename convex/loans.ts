@@ -6,7 +6,7 @@ import { audit } from "./lib/audit";
 import { today } from "./lib/config";
 import { appError } from "./lib/errors";
 import { internalMutation, userMutation, userQuery } from "./lib/functions";
-import { loadLoanForParty, nameOf, requireParty, summarizeLoan } from "./lib/loanAccess";
+import { loadLoanForParty, nameOf, requireParty, summarizeLoan, type Party } from "./lib/loanAccess";
 import { applyLoanTransition } from "./lib/loanTransitions";
 import { enforceLimit } from "./lib/rateLimits";
 import { activeLoanFor, blockingLoans } from "./lib/tools";
@@ -291,8 +291,11 @@ export const timeline = userQuery({
       status: r.status,
     }));
 
+    // Which side the viewer is on, so the UI can say "you" and pick the actions.
+    const viewer: Party | "admin" = party ?? "admin";
     return {
-      loan: await summarizeLoan(ctx, loan, today(), party ?? "admin"),
+      loan: await summarizeLoan(ctx, loan, today(), viewer),
+      viewer,
       nextStep: nextStep(loan.status),
       entries: [...statusEntries, ...notificationEntries, ...reminderEntries].sort((a, b) => a.at - b.at),
     };
