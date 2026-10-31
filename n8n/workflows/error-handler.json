@@ -1,0 +1,171 @@
+{
+  "id": "llErrorHandler001",
+  "name": "error-handler",
+  "nodes": [
+    {
+      "id": "e8ee8ceb-5302-5867-a411-07df86924c23",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "7de00dac-a992-51b6-aafc-1bead1c957d8",
+      "name": "Sanitize error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Report only what an admin needs: workflow, execution, node and a short\n// message with email addresses removed. Execution data (and so the event ID)\n// is not available to an error workflow.\nconst PATH = '/n8n/automation-errors';\nconst data = $input.first().json;\nconst execution = data.execution || {};\nconst error = execution.error || (data.trigger && data.trigger.error) || {};\nconst scrub = (value) => String(value).replace(/[^\\s@<>\"']+@[^\\s@<>\"']+/g, '[email]');\nconst report = {\n  workflow: scrub((data.workflow && data.workflow.name) || 'unknown').slice(0, 100),\n  executionId: String(execution.id ?? `trigger-${(data.workflow && data.workflow.id) || 'unknown'}-${Date.now()}`),\n  message: scrub(error.message || error.description || 'Unknown error').slice(0, 500),\n};\nif (execution.lastNodeExecuted) report.node = scrub(execution.lastNodeExecuted).slice(0, 100);\nconst body = JSON.stringify(report);\nconst ts = String(Math.floor(Date.now() / 1000));\nreturn [\n  {\n    json: {\n      body,\n      ts,\n      canonical: `${ts}.POST.${PATH}.${body}`,\n      workflow: report.workflow,\n      node: report.node || 'unknown',\n      executionId: report.executionId,\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "46b63957-6759-5b7f-8f1f-845e21c007b7",
+      "name": "Sign error report",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.canonical }}",
+        "dataPropertyName": "signature",
+        "encoding": "hex"
+      },
+      "credentials": {
+        "crypto": {
+          "id": "llCryptoOutbound1",
+          "name": "LendLoop: n8n→Convex HMAC"
+        }
+      }
+    },
+    {
+      "id": "ccaee47f-7380-5b8b-8d63-631302ff8111",
+      "name": "POST automation error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "{{CONVEX_SITE_URL}}/n8n/automation-errors",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-lendloop-timestamp",
+              "value": "={{ $json.ts }}"
+            },
+            {
+              "name": "x-lendloop-signature",
+              "value": "=v1={{ $json.signature }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "5e28db72-7344-5bf5-af04-fb7021a4ea2b",
+      "name": "Email ops",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        880,
+        400
+      ],
+      "parameters": {
+        "fromEmail": "{{MAIL_FROM}}",
+        "toEmail": "{{OPS_EMAIL}}",
+        "subject": "LendLoop automation failure",
+        "emailFormat": "text",
+        "text": "=An automation failed and could not be reported to Convex.\n\nWorkflow: {{ $('Sanitize error').first().json.workflow }}\nNode: {{ $('Sanitize error').first().json.node }}\nExecution: {{ $('Sanitize error').first().json.executionId }}\n\nLendLoop",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "smtp": {
+          "id": "llSmtp0000000001",
+          "name": "LendLoop SMTP"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Sanitize error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize error": {
+      "main": [
+        [
+          {
+            "node": "Sign error report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign error report": {
+      "main": [
+        [
+          {
+            "node": "POST automation error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST automation error": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Email ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
