@@ -72,3 +72,36 @@ export function relativeTime(at: number, now: number = Date.now(), timeZone?: st
     timeZone,
   }).format(at);
 }
+
+/**
+ * "Marta R." → "Marta": copy addresses people by first name. Only a trailing
+ * initial is dropped, so "Former neighbour" (a deleted account) stays whole.
+ */
+export function firstName(displayName: string): string {
+  const name = displayName.trim();
+  return /^(.+?)\s+\p{Lu}\.$/u.exec(name)?.[1] ?? name;
+}
+
+/**
+ * A tool name as it reads inside a sentence: "Orbital sander" becomes
+ * "orbital sander", but names with their own capitals ("DeWalt drill",
+ * "XL ladder") are left alone.
+ */
+export function inSentence(name: string): string {
+  const first = name.split(/\s+/)[0] ?? "";
+  return /^\p{Lu}\p{Ll}*$/u.test(first) ? name.charAt(0).toLowerCase() + name.slice(1) : name;
+}
+
+const absoluteTime = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/** "Oct 31, 2026, 16:42" in the viewer's time zone, for tooltips under relative times. */
+export function formatTimestamp(at: number): string {
+  return absoluteTime.format(at);
+}

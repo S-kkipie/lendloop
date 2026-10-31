@@ -1,10 +1,11 @@
 "use client";
 
-import { MagnifyingGlassIcon, PackageIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { useQuery } from "convex/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
+import { EmptyState } from "@/components/shell/EmptyState";
 import { Kbd } from "@/components/shell/Kbd";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
@@ -82,19 +83,6 @@ function ResultsGridSkeleton() {
       {Array.from({ length: 8 }, (_, index) => (
         <ToolCardSkeleton key={index} />
       ))}
-    </div>
-  );
-}
-
-function EmptyState({ title, body, action }: { title: string; body: string; action: React.ReactNode }) {
-  return (
-    <div className="grid justify-items-center gap-3 rounded-xl border border-dashed border-input bg-card px-6 py-14 text-center">
-      <PackageIcon aria-hidden="true" className="size-6 text-muted-foreground" />
-      <div className="grid gap-1">
-        <h2 className="text-base font-semibold tracking-title">{title}</h2>
-        <p className="max-w-[46ch] text-sm text-muted-foreground">{body}</p>
-      </div>
-      <div className="mt-1">{action}</div>
     </div>
   );
 }

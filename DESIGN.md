@@ -94,6 +94,26 @@ table above passes WCAG AA (checked with a script against the CSS file).
   condition, lender with the Trusted seal, or "Yours"); category chips are
   toggle buttons in one row that scrolls sideways below `sm`; filters live in
   the URL (`q`, `category`, `available`); `/` focuses search.
+- Ledger lists (`components/shell/LedgerList`): one framed panel of hairline
+  rows. Below xl each row stacks (name and status, person, mono dates, notes,
+  actions full width on phones); from xl the rows share one grid through
+  `subgrid` and read as a table under mono column heads. Rows carry their own
+  padding; the record's name is the link (loan timeline, tool page).
+- Loan lists (`components/loans`): `StatusBadge` (label always, overdue the
+  only solid tone), `LoanRow`, `LoanActions`. Secondary actions first, the next
+  step last in cobalt. Confirmations (AlertDialog, focus on the safe choice)
+  only for side effects: approving a request that declines overlapping ones,
+  cancelling an approved booking, marking a loan returned, removing a listing.
+  Everything else acts at once with a quiet toast. After an action that moves
+  the row away, focus goes to the next row's first action. A disabled action
+  stays focusable and says why in a tooltip. Stage tabs keep their state in
+  `?tab=` and carry mono counts; the count is cobalt only where something
+  waits on the viewer.
+- Live rows: an item that arrives after the first paint eases in once with
+  `row-arrive` (200 ms, opacity + 4 px, `useArrivals`); never on first paint
+  or on a tab switch.
+- Empty states (`components/shell/EmptyState`): dashed frame, small icon, why
+  it is empty, and the action that fills it.
 - Icons: Phosphor only (`@phosphor-icons/react`), regular weight, `fill` for
   status glyphs (seal, check), `bold` inside small badges. No emoji, no lucide.
 

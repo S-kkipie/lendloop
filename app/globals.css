@@ -312,6 +312,12 @@
     animation-delay: calc(var(--blur-fade-index, 0) * 40ms);
   }
 
+  /* Live lists (loan rows, timeline entries): an item that arrives after the
+   * first paint eases in once. Items present at first paint never animate. */
+  .row-arrive {
+    animation: row-arrive 200ms var(--ease-out) both;
+  }
+
   /* Labels that swap in place (StatefulButton): crossfade with a 2 px blur so
    * the two labels read as one changing object. */
   .motion-swap {
@@ -353,6 +359,13 @@
   }
 }
 
+@keyframes row-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
 /* In-page anchors on the landing glide instead of jumping (reduced motion
  * resets this below) and land clear of the viewport edge. */
 html:has([data-page="landing"]) {
@@ -389,7 +402,8 @@ html:has([data-page="landing"]) {
   .animate-pulse {
     animation: none;
   }
-  .blur-fade {
+  .blur-fade,
+  .row-arrive {
     animation-name: fade-in;
   }
   .motion-swap[data-hidden="true"] {

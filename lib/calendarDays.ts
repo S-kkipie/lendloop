@@ -68,3 +68,11 @@ export function overlapsBooked(start: string, end: string, booked: readonly DayR
 export function bookedRangeOn<T extends DayRange>(day: string, booked: readonly T[]): T | undefined {
   return booked.find((range) => range.startDate <= day && day <= range.endDate);
 }
+
+/**
+ * The server's "today" for deadline checks (has a booking ended?). Convex
+ * computes it in APP_TIMEZONE, UTC unless configured otherwise.
+ */
+export function serverToday(now: Date = new Date()): string {
+  return now.toISOString().slice(0, 10);
+}

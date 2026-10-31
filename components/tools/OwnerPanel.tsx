@@ -1,29 +1,16 @@
 "use client";
 
 import { ArrowRightIcon, PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { Availability } from "@/convex/lib/tools";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogMedia,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { messageForError } from "@/lib/convexErrors";
 import { formatDay } from "@/lib/format";
+import { RemoveListingDialog } from "./RemoveListingDialog";
 
 interface OwnerPanelProps {
   toolId: Id<"tools">;
@@ -38,33 +25,11 @@ function plural(count: number, word: string): string {
 /** The owner's side of a tool: edit, remove, and the way to its requests. */
 export function OwnerPanel({ toolId, toolName, availability }: OwnerPanelProps) {
   const router = useRouter();
-  const remove = useMutation(api.tools.remove);
   const mine = useQuery(api.tools.mine);
   const pending = mine?.find((tool) => tool._id === toolId)?.pendingRequests ?? 0;
-  const [open, setOpen] = useState(false);
-  const [removing, setRemoving] = useState(false);
 
   const onLoan = availability.state === "on_loan";
   const blockedReason = onLoan ? `On loan until ${formatDay(availability.until)}` : null;
-
-  async function confirmRemove() {
-    setRemoving(true);
-    try {
-      const { cancelledLoans } = await remove({ toolId });
-      setOpen(false);
-      toast.success(`${toolName} was removed`, {
-        description:
-          cancelledLoans > 0
-            ? `${plural(cancelledLoans, "open request")} ${cancelledLoans === 1 ? "was" : "were"} cancelled and the borrowers told.`
-            : "It no longer appears in Browse.",
-      });
-      router.push("/tools");
-    } catch (error) {
-      toast.error("The listing wasn't removed", { description: messageForError(error) });
-    } finally {
-      setRemoving(false);
-    }
-  }
 
   const removeButton = (
     <Button
@@ -103,29 +68,12 @@ export function OwnerPanel({ toolId, toolName, availability }: OwnerPanelProps) 
             </p>
           </div>
         ) : (
-          <AlertDialog open={open} onOpenChange={(next) => !removing && setOpen(next)}>
-            <AlertDialogTrigger render={removeButton} />
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogMedia>
-                  <TrashIcon aria-hidden="true" />
-                </AlertDialogMedia>
-                <AlertDialogTitle>Remove {toolName}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  It leaves Browse right away.{" "}
-                  {pending > 0
-                    ? `${plural(pending, "open request")} will be cancelled and the borrowers told by email.`
-                    : "Nobody has asked for it right now."}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={removing}>Keep listing</AlertDialogCancel>
-                <Button variant="destructive" onClick={confirmRemove} aria-busy={removing || undefined}>
-                  {removing ? "Removing…" : "Remove listing"}
-                </Button>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <RemoveListingDialog
+            toolId={toolId}
+            toolName={toolName}
+            trigger={removeButton}
+            onRemoved={() => router.push("/tools")}
+          />
         )}
       </div>
 

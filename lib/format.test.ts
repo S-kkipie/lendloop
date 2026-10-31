@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayCount, formatDay, formatRange, relativeTime } from "./format";
+import { dayCount, firstName, formatDay, formatRange, formatTimestamp, inSentence, relativeTime } from "./format";
 
 describe("formatDay", () => {
   it.each([
@@ -73,5 +73,38 @@ describe("relativeTime", () => {
   it("uses the viewer's time zone for the calendar day of older events", () => {
     const at = Date.UTC(2026, 10, 11, 2, 0); // Nov 11 02:00 UTC is Nov 10 evening in New York
     expect(relativeTime(at, now, "America/New_York")).toBe("Nov 10");
+  });
+});
+
+describe("firstName", () => {
+  it.each([
+    ["Marta R.", "Marta"],
+    ["  Joaquín P. ", "Joaquín"],
+    ["Mary Jane W.", "Mary Jane"],
+    ["Former neighbour", "Former neighbour"],
+    ["Ana", "Ana"],
+  ])("%s → %s", (name, expected) => {
+    expect(firstName(name)).toBe(expected);
+  });
+});
+
+describe("inSentence", () => {
+  it.each([
+    ["Orbital sander", "orbital sander"],
+    ["Cordless drill", "cordless drill"],
+    ["Ébano chair", "ébano chair"],
+    ["DeWalt drill", "DeWalt drill"],
+    ["XL ladder", "XL ladder"],
+    ["3 m ladder", "3 m ladder"],
+    ["iPad stand", "iPad stand"],
+  ])("%s → %s", (name, expected) => {
+    expect(inSentence(name)).toBe(expected);
+  });
+});
+
+describe("formatTimestamp", () => {
+  it("formats a 24-hour time with the date", () => {
+    const at = new Date(2026, 9, 31, 16, 42).getTime(); // local time
+    expect(formatTimestamp(at)).toBe("Oct 31, 2026, 16:42");
   });
 });

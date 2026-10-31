@@ -5,6 +5,7 @@ import {
   earliestStartDay,
   fromDayString,
   overlapsBooked,
+  serverToday,
   shiftDay,
   toDayString,
 } from "./calendarDays";
@@ -86,5 +87,12 @@ describe("booked ranges", () => {
     expect(bookedRangeOn("2026-11-08", BOOKED)).toEqual(BOOKED[0]);
     expect(bookedRangeOn("2026-11-20", BOOKED)).toEqual(BOOKED[1]);
     expect(bookedRangeOn("2026-11-10", BOOKED)).toBeUndefined();
+  });
+});
+
+describe("serverToday", () => {
+  it("is the UTC calendar day", () => {
+    expect(serverToday(new Date("2026-11-06T23:30:00-05:00"))).toBe("2026-11-07");
+    expect(serverToday(new Date("2026-11-06T00:30:00+02:00"))).toBe("2026-11-05");
   });
 });
