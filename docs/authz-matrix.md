@@ -32,3 +32,6 @@ Actors: **owner** owns the tool (or is the lender on the loan), **borrower** mad
 | `admin:removeTool` | Remove any listing | ❌ UNAUTHENTICATED | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ✅ |
 | `admin:setTrustedLender` | Mark a Trusted Lender | ❌ UNAUTHENTICATED | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ✅ |
 | `admin:auditLog` | Audit trail | ❌ UNAUTHENTICATED | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ✅ |
+| `admin:automationHealth` | Outbox, errors and reminder heartbeat | ❌ UNAUTHENTICATED | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ✅ |
+| `admin:replayEvent` | Replay a failed notification | ❌ UNAUTHENTICATED | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ✅ |
+| `admin:resolveError` | Mark an automation error resolved | ❌ UNAUTHENTICATED | ❌ FORBIDDEN | ❌ FORBIDDEN | ❌ FORBIDDEN | ✅ |

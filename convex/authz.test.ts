@@ -11,8 +11,8 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
-type Needs = "none" | "pending" | "approved" | "active";
-type Ctx = World & { loanId: Id<"loans"> };
+type Needs = "none" | "pending" | "approved" | "active" | "deadEvent" | "automationError";
+type Ctx = World & { loanId: Id<"loans">; eventId: Id<"outboxEvents">; errorId: Id<"automationErrors"> };
 type Call = {
   kind: "query" | "mutation";
   ref: FunctionReference<"query" | "mutation", "public">;
@@ -78,6 +78,19 @@ const CALLS: Record<string, Call> = {
     args: (c) => ({ userId: c.alice.id, trusted: true }),
   },
   "admin:auditLog": { kind: "query", ref: api.admin.auditLog, needs: "none", args: () => ({}) },
+  "admin:automationHealth": { kind: "query", ref: api.admin.automationHealth, needs: "none", args: () => ({}) },
+  "admin:replayEvent": {
+    kind: "mutation",
+    ref: api.admin.replayEvent,
+    needs: "deadEvent",
+    args: (c) => ({ eventId: c.eventId }),
+  },
+  "admin:resolveError": {
+    kind: "mutation",
+    ref: api.admin.resolveError,
+    needs: "automationError",
+    args: (c) => ({ errorId: c.errorId }),
+  },
 };
 
 test("every matrix row has an executable call and vice versa", () => {
@@ -104,10 +117,31 @@ describe.each(MATRIX)("$fn", (row) => {
     const t = setupTest();
     const w = await seedWorld(t);
     const call = CALLS[row.fn];
-    const loanId =
-      call.needs === "none" ? (undefined as unknown as Id<"loans">) : await insertLoan(t, w, { status: call.needs });
+    const loanStates = ["pending", "approved", "active"] as const;
+    type LoanState = (typeof loanStates)[number];
+    const loanId = loanStates.includes(call.needs as LoanState)
+      ? await insertLoan(t, w, { status: call.needs as LoanState })
+      : (undefined as unknown as Id<"loans">);
+    const eventId =
+      call.needs === "deadEvent"
+        ? await t.run((ctx) =>
+            ctx.db.insert("outboxEvents", {
+              type: "loan.requested",
+              schemaVersion: 1,
+              recipientId: w.alice.id,
+              status: "dead",
+              attempts: 5,
+            }),
+          )
+        : (undefined as unknown as Id<"outboxEvents">);
+    const errorId =
+      call.needs === "automationError"
+        ? await t.run((ctx) =>
+            ctx.db.insert("automationErrors", { workflow: "loan-notifications", executionId: "x1", message: "boom" }),
+          )
+        : (undefined as unknown as Id<"automationErrors">);
     const who = accessorFor(t, w, actor);
-    const args = call.args({ ...w, loanId });
+    const args = call.args({ ...w, loanId, eventId, errorId });
     const promise =
       call.kind === "query"
         ? who.query(call.ref as FunctionReference<"query">, args)

@@ -78,6 +78,9 @@ export const MATRIX: MatrixRow[] = [
   { fn: "admin:removeTool", description: "Remove any listing", expect: adminOnly },
   { fn: "admin:setTrustedLender", description: "Mark a Trusted Lender", expect: adminOnly },
   { fn: "admin:auditLog", description: "Audit trail", expect: adminOnly },
+  { fn: "admin:automationHealth", description: "Outbox, errors and reminder heartbeat", expect: adminOnly },
+  { fn: "admin:replayEvent", description: "Replay a failed notification", expect: adminOnly },
+  { fn: "admin:resolveError", description: "Mark an automation error resolved", expect: adminOnly },
 ];
 
 export function renderMatrix(): string {
