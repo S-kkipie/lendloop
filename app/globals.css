@@ -1,5 +1,8 @@
 /* Hallmark · genre: modern-minimal · direction: B Ledger · theme: custom (cobalt on cool paper)
  * type: IBM Plex Sans + IBM Plex Mono · accent hue: cool (263) · radii 8/10/6 · hairlines, shadows on overlays only
+ * Landing (app/(public)): macrostructure: Index-First (the live register is the page's spine) · nav: N1a
+ *   (two in-page anchors + sign in) · footer: Ft2 inline line · enrichment: Paper Dithering band (Tier D)
+ * Landing pre-emit critique: P4 H5 E4 S4 R5 V4
  * Single light theme (user decision 2026-10-31). Source of truth for every colour,
  * radius, shadow and motion token. See DESIGN.md.
  */
@@ -126,6 +129,9 @@
   --danger-hover: oklch(51% 0.19 25);
   --danger-soft: oklch(95.5% 0.03 25);
   --danger-ink: oklch(48% 0.17 25);
+
+  /* Middle stop of the landing band's static fallback (cobalt, hue 263). */
+  --band-mid: oklch(88% 0.07 263);
 
   --skeleton: oklch(94.5% 0.005 262);
   --backdrop: oklch(19% 0.012 262 / 0.28);
@@ -296,6 +302,46 @@
     opacity: 1;
     transform: none;
   }
+
+  /* BlurFade (components/ui/blur-fade.tsx): one entrance per element, on
+   * mount, staggered by --blur-fade-index. CSS so it runs before hydration. */
+  .blur-fade {
+    animation: blur-fade-in 300ms var(--ease-out) both;
+    animation-delay: calc(var(--blur-fade-index, 0) * 40ms);
+  }
+
+  /* Landing band: the static picture under the Dithering shader. It is what
+   * renders before the shader mounts, without WebGL, and if the shader fails. */
+  .dither-fallback {
+    background-color: var(--primary-soft);
+    background-image: linear-gradient(
+      90deg,
+      var(--primary-soft),
+      var(--band-mid) 55%,
+      var(--surface-2)
+    );
+  }
+}
+
+@keyframes blur-fade-in {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(4px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* In-page anchors on the landing glide instead of jumping (reduced motion
+ * resets this below) and land clear of the viewport edge. */
+html:has([data-page="landing"]) {
+  scroll-behavior: smooth;
+  scroll-padding-top: 1.5rem;
 }
 
 /* Sonner: keep toasts inside the 300 ms motion budget and never animate their
@@ -326,5 +372,11 @@
   }
   .animate-pulse {
     animation: none;
+  }
+  .blur-fade {
+    animation-name: fade-in;
+  }
+  html:has([data-page="landing"]) {
+    scroll-behavior: auto;
   }
 }

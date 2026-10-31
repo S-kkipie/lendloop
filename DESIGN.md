@@ -94,6 +94,21 @@ table above passes WCAG AA (checked with a script against the CSS file).
 - Pages render inside `main` (max-w-6xl, 16/24/40 px gutters); they own their
   `h1`. Wrap data views in skeletons shaped like the final layout.
 
+## Landing (`app/(public)`)
+
+- Static shell with two request-time holes in Suspense: the sign-in aware
+  actions (Clerk `<Show>` on the server, fallback is the signed-out button) and
+  the live register (`preloadQuery(tools.listPublic)` then `usePreloadedQuery`).
+- Order: top bar (wordmark, two in-page anchors, Sign in `S`), left-aligned
+  hero (one sentence per line from md), the Dithering band with the register
+  hanging from it (first 10 rows, then a "N more" row), How it works as
+  numbered ledger rows with the app's own status badges, the data promise as
+  one framed panel of rows, a one-line mono footer.
+- The band: Paper `Dithering` (warp, 4x4, size 2.5, speed 0.25), colours read
+  from `--background` / `--primary` at runtime, CSS fallback `.dither-fallback`
+  underneath, its own pause toggle (WCAG 2.2.2), a still frame under reduced
+  motion. Repository links appear only when `NEXT_PUBLIC_REPO_URL` is set.
+
 ## Motion (Emil Kowalski rules)
 
 - Easings: `--ease-out: cubic-bezier(0.23, 1, 0.32, 1)`,
@@ -104,13 +119,17 @@ table above passes WCAG AA (checked with a script against the CSS file).
 - Primitives in globals.css: `motion-press` (scale 0.97 on `:active`),
   `motion-pop` (opacity + scale 0.97 from `--transform-origin`),
   `motion-dialog` (centred), `motion-sheet` (slides from its side),
-  `motion-fade` (backdrops), `motion-none` (keyboard-first surfaces).
+  `motion-fade` (backdrops), `motion-none` (keyboard-first surfaces),
+  `blur-fade` (first-paint entrance, CSS keyframes so it runs before
+  hydration; `BlurFade` sets the 40 ms stagger index).
   They use Base UI `data-starting-style` / `data-ending-style`, so transitions
   are interruptible. Do not use tw-animate `animate-in` classes.
 - No animation on keyboard-triggered actions, the command palette or tab
   switches. Hover styles only under `(hover: hover) and (pointer: fine)` (the
   `hover:` variant is redefined in globals.css).
 - Reduced motion keeps opacity and drops movement; skeleton pulse stops.
+- `NumberTicker` counts once on first paint (600 ms, `--ease-out`); live
+  updates jump to the new value. The real number is always in the a11y tree.
 - Focus ring: 2 px `--ring` outline, offset 2 px (1 px on fields, inset on menu
   items), appears instantly, never transitioned. Tailwind v4's
   `transition-colors` includes `outline-color`, so use
