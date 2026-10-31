@@ -22,7 +22,8 @@
     "convex-helpers": "0.1.133",
     "next": "16.4.3",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "svix": "~2.9.1"
   },
   "devDependencies": {
     "@edge-runtime/vm": "^5.0.0",

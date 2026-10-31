@@ -1733,6 +1733,8 @@ export const clerkWebhook = httpAction(async (ctx, request) => {
 });
 ```
 
+Note (found during execution): svix 2.9 `Webhook.verify()` returns `undefined` and only throws on failure, so verify first, then `JSON.parse(payload)` yourself (400 on invalid JSON).
+
 Register in `convex/http.ts` (import `clerkWebhook` from `./clerkWebhook`):
 
 ```ts

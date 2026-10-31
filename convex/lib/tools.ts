@@ -48,8 +48,8 @@ export async function removeToolCascade(
   ctx: MutationCtx,
   input: {
     tool: Doc<"tools">;
-    actorId: Id<"users">;
-    actorType: "user" | "admin";
+    actorId?: Id<"users">;
+    actorType: "user" | "admin" | "system";
     reason?: string;
     notifyOwner: boolean;
   },

@@ -3,6 +3,7 @@ import { validate } from "convex-helpers/validators";
 import { internal } from "./_generated/api";
 import { vAutomationError, vNotificationStatus, vReminderReport } from "./automation/contract";
 import { InvalidBody, json, signedEndpoint } from "./automation/inbound";
+import { clerkWebhook } from "./clerkWebhook";
 import { httpAction } from "./lib/functions";
 
 const http = httpRouter();
@@ -52,5 +53,7 @@ http.route({
     return json(200, await ctx.runMutation(internal.automation.errors.recordError, body));
   }),
 });
+
+http.route({ path: "/clerk/webhook", method: "POST", handler: clerkWebhook });
 
 export default http;

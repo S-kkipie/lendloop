@@ -18,6 +18,7 @@ import type * as automation_notifications from "../automation/notifications.js";
 import type * as automation_outbox from "../automation/outbox.js";
 import type * as automation_payloads from "../automation/payloads.js";
 import type * as automation_reminders from "../automation/reminders.js";
+import type * as clerkWebhook from "../clerkWebhook.js";
 import type * as crons from "../crons.js";
 import type * as http from "../http.js";
 import type * as lib_audit from "../lib/audit.js";
@@ -59,6 +60,7 @@ declare const fullApi: ApiFromModules<{
   "automation/outbox": typeof automation_outbox;
   "automation/payloads": typeof automation_payloads;
   "automation/reminders": typeof automation_reminders;
+  clerkWebhook: typeof clerkWebhook;
   crons: typeof crons;
   http: typeof http;
   "lib/audit": typeof lib_audit;
