@@ -5,7 +5,7 @@ import { enqueueEvent } from "./automation/outbox";
 import { audit } from "./lib/audit";
 import { today } from "./lib/config";
 import { appError } from "./lib/errors";
-import { userMutation, userQuery } from "./lib/functions";
+import { internalMutation, userMutation, userQuery } from "./lib/functions";
 import { loadLoanForParty, nameOf, requireParty, summarizeLoan } from "./lib/loanAccess";
 import { applyLoanTransition } from "./lib/loanTransitions";
 import { enforceLimit } from "./lib/rateLimits";
@@ -296,5 +296,44 @@ export const timeline = userQuery({
       nextStep: nextStep(loan.status),
       entries: [...statusEntries, ...notificationEntries, ...reminderEntries].sort((a, b) => a.at - b.at),
     };
+  },
+});
+
+export const expireStale = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const t0 = today();
+    const stalePending = await ctx.db
+      .query("loans")
+      .withIndex("by_status_startDate", (q) => q.eq("status", "pending").lt("startDate", t0))
+      .take(200);
+    for (const loan of stalePending) {
+      await applyLoanTransition(ctx, {
+        loan,
+        action: "expire",
+        actor: "system",
+        actorType: "system",
+        closeReason: "start_passed",
+        notify: [{ type: "loan.expired", recipientId: loan.borrowerId }],
+      });
+    }
+    const staleApproved = await ctx.db
+      .query("loans")
+      .withIndex("by_status_endDate", (q) => q.eq("status", "approved").lt("endDate", t0))
+      .take(200);
+    for (const loan of staleApproved) {
+      await applyLoanTransition(ctx, {
+        loan,
+        action: "expire",
+        actor: "system",
+        actorType: "system",
+        closeReason: "not_handed_over",
+        notify: [
+          { type: "loan.expired", recipientId: loan.borrowerId },
+          { type: "loan.expired", recipientId: loan.ownerId },
+        ],
+      });
+    }
+    return { expired: stalePending.length + staleApproved.length };
   },
 });

@@ -9,6 +9,7 @@
  */
 
 import type * as automation_outbox from "../automation/outbox.js";
+import type * as crons from "../crons.js";
 import type * as lib_audit from "../lib/audit.js";
 import type * as lib_config from "../lib/config.js";
 import type * as lib_displayName from "../lib/displayName.js";
@@ -34,6 +35,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "automation/outbox": typeof automation_outbox;
+  crons: typeof crons;
   "lib/audit": typeof lib_audit;
   "lib/config": typeof lib_config;
   "lib/displayName": typeof lib_displayName;
