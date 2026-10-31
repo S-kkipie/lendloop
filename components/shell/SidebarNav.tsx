@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { MagnifyingGlassIcon, PlusIcon } from "@phosphor-icons/react";
 import { api } from "@/convex/_generated/api";
 import { useMe, useUserStatus } from "@/components/providers/EnsureUser";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCommandPalette } from "./CommandPalette";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -105,15 +105,11 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           Search
           <ModKbd keyName="K" className="ml-auto pointer-coarse:hidden" />
         </Button>
-        <Button
-          className="w-full justify-start gap-2 px-2.5"
-          render={<Link href="/tools/new" onClick={onNavigate} />}
-          nativeButton={false}
-        >
+        <ButtonLink href="/tools/new" onClick={onNavigate} className="w-full justify-start gap-2 px-2.5">
           <PlusIcon aria-hidden="true" weight="bold" />
           List a tool
           <Kbd className="ml-auto pointer-coarse:hidden">N</Kbd>
-        </Button>
+        </ButtonLink>
       </div>
 
       <SidebarNav onNavigate={onNavigate} />

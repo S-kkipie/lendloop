@@ -1,9 +1,8 @@
 import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
 import { Show, SignInButton } from "@clerk/nextjs";
-import Link from "next/link";
 import { Suspense } from "react";
 import { Kbd } from "@/components/shell/Kbd";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { SignInShortcut } from "./SignInShortcut";
 
 // Sign-in aware calls to action. The session is read on the server (Clerk's
@@ -38,10 +37,10 @@ function SignInHeroButton() {
 
 function OpenAppButton({ size, variant }: { size: "sm" | "lg"; variant: "outline" | "default" }) {
   return (
-    <Button size={size} variant={variant} render={<Link href={AFTER_SIGN_IN} />} nativeButton={false}>
+    <ButtonLink size={size} variant={variant} href={AFTER_SIGN_IN}>
       Open LendLoop
       <ArrowRightIcon aria-hidden="true" weight="bold" />
-    </Button>
+    </ButtonLink>
   );
 }
 

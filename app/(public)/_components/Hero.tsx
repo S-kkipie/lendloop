@@ -1,5 +1,5 @@
 import { ArrowDownIcon } from "@phosphor-icons/react/ssr";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { HeroAuthAction } from "./AuthActions";
 
 /** Left-aligned, content-height hero: the promise, one line of how, one action. */
@@ -18,10 +18,11 @@ export function Hero() {
       </p>
       <div className="mt-8 flex flex-wrap items-center gap-3">
         <HeroAuthAction />
-        <Button size="lg" variant="ghost" render={<a href="#register" />} nativeButton={false}>
+        {/* A plain anchor, so the jump uses the page's CSS smooth scrolling. */}
+        <a href="#register" className={buttonVariants({ size: "lg", variant: "ghost" })}>
           Browse tools
           <ArrowDownIcon aria-hidden="true" weight="bold" />
-        </Button>
+        </a>
       </div>
     </section>
   );

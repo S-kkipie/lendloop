@@ -3,11 +3,10 @@
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { SignInButton, useAuth } from "@clerk/nextjs";
 import { usePreloadedQuery, type Preloaded } from "convex/react";
-import Link from "next/link";
 import { useState } from "react";
 import type { api } from "@/convex/_generated/api";
 import { BlurFade } from "@/components/ui/blur-fade";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { categoryLabel } from "@/lib/categories";
@@ -86,10 +85,10 @@ function MoreRow({ hidden }: { hidden: number }) {
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-muted px-4 py-3">
       <span className="font-mono text-xs text-muted-foreground">{label}</span>
       {isSignedIn ? (
-        <Button size="sm" variant="link" render={<Link href="/tools" />} nativeButton={false}>
+        <ButtonLink size="sm" variant="link" href="/tools">
           Browse all tools
           <ArrowRightIcon aria-hidden="true" weight="bold" />
-        </Button>
+        </ButtonLink>
       ) : (
         <SignInButton mode="modal" fallbackRedirectUrl="/tools">
           <Button size="sm" variant="link">
