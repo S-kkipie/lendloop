@@ -1,0 +1,60 @@
+# Checks on every push and pull request. The browser (Playwright) and automation
+# (n8n) end-to-end suites are not run here: they need a Clerk instance and the
+# local stack, so they run locally (pnpm e2e, pnpm e2e:automation).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      # Version from package.json "packageManager".
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - name: docs/authz-matrix.md matches the generated matrix
+        run: pnpm docs:authz --check
+      # The build needs syntactically valid public config, nothing real: a
+      # publishable key for a made-up Clerk host and a made-up Convex URL.
+      - name: Dummy public config for the build
+        run: |
+          echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_$(printf 'example.clerk.accounts.dev$' | base64 -w0)" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_CONVEX_URL=https://example-ci-123.convex.cloud" >> "$GITHUB_ENV"
+      - run: pnpm build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+
+  secrets:
+    name: Secret scan (gitleaks, full history)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      # Pinned image (v8.30.1). Findings are redacted; .gitleaks.toml allowlists
+      # only the test fixtures, by path and exact value.
+      - name: gitleaks
+        run: >-
+          docker run --rm -v "$PWD:/repo"
+          zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+          git /repo --redact --no-banner --config /repo/.gitleaks.toml
