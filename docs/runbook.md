@@ -71,7 +71,7 @@ pnpm setup:local --rotate   # new values in n8n/.env, old ones kept as *_PREVIOU
 pnpm stack:up               # recreate n8n with the new credentials
 ```
 
-`--rotate` rotates both secrets in `n8n/.env` and pushes the Convex side at once, so Convex signs with the new Convex → n8n secret before n8n has restarted. Run `pnpm stack:up` immediately; a notification enqueued in that gap can be rejected and go `dead`, and is recovered with a replay. The n8n → Convex direction has no gap (Convex already accepts the old secret as previous).
+`--rotate` orders the steps so there is no gap: it writes the new secrets to `n8n/.env` (old ones kept as `*_PREVIOUS`), gives Convex the new inbound secret plus both previous values, restarts n8n and waits until it is healthy and accepts both webhook secrets, and only then switches Convex to sign with the new Convex → n8n secret (`scripts/lib/rotation.ts`, tested). If the stack is not running it tells you to start n8n first and still updates Convex last. The n8n → Convex direction has no gap either, because Convex accepts the previous secret.
 
 To finish a local rotation, delete the `*_PREVIOUS` lines from `n8n/.env`, run `pnpm exec convex env remove N8N_WEBHOOK_SECRET_PREVIOUS` and `pnpm exec convex env remove CONVEX_INBOUND_SECRET_PREVIOUS`, then `pnpm stack:up`.
 

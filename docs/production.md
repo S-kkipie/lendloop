@@ -42,7 +42,7 @@ Production secrets are generated for production only (none are shared with the l
 | 6 | [Nonce-based CSP](#nonce-based-csp) | `'unsafe-inline'` scripts today | medium |
 | 7 | [Retention and purge jobs](#retention-and-purge) | everything in Convex is kept forever | small |
 | 8 | [Data export and erasure](#data-subject-rights) | deletion anonymizes; no export | medium |
-| 9 | [Rate-limit tuning and edge protection](#rate-limits-and-edge-protection) | global inbound buckets, checked before the signature | small |
+| 9 | [Rate-limit tuning and edge protection](#rate-limits-and-edge-protection) | global inbound buckets (signature is checked first); no per-IP edge limit | small |
 | 10 | [Bounce and complaint handling](#email) | "sent" means accepted by SMTP | small |
 | 11 | [Assurance](#assurance): pentest, E2E in CI, staging | E2E is local only | medium |
 | 12 | [Tenancy](#tenancy) | one neighbourhood | large |
@@ -114,7 +114,7 @@ Convex keeps every row today. Proposed policy, each implemented as a Convex cron
 
 ## Rate limits and edge protection
 
-- Check the HMAC before consuming the shared `inboundHttp` bucket, or key it by verified caller, so unsigned floods cannot starve n8n.
+- The HMAC is already checked before the shared `inboundHttp` bucket is consumed; add per-caller keys if more than one automation client appears.
 - Put the app behind Vercel's firewall (or Cloudflare) with per-IP limits; keep Clerk's bot protection on sign-up.
 - Tune `loanRequest` (10 per hour) and `toolCreate` (20 per day) from real usage; add a per-owner limit on incoming requests to stop harassment through repeated requests.
 

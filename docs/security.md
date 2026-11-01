@@ -162,7 +162,7 @@ These are true of the code today. Fixes for the ones that matter in production a
 
 1. **Clerk is a development instance** in the demo (dev keys, Clerk's development banner and limits). A production instance needs an owned app domain.
 2. **CSP allows `'unsafe-inline'` scripts and styles.** A nonce-based policy needs dynamic rendering of every page.
-3. **Inbound rate-limit buckets are global and consumed before the signature check.** A flood of unsigned requests can exhaust the bucket and delay n8n's legitimate calls (n8n retries 3 times, then reports through the error workflow). Keying buckets by verified caller, or rejecting at the edge, would fix it.
+3. **Inbound rate-limit buckets are global.** The HMAC is verified first, so unsigned floods get a 401 without touching the bucket (`convex/http.test.ts` proves 300 unsigned requests do not block a signed one), but there is no per-IP limit in front of Convex; edge rate limiting is a production item.
 4. **The n8n editor is reachable on the same public domain as the webhook** in the demo. It is protected by the env-provisioned owner account with a generated password; MFA is not enforced.
 5. **n8n's dedupe history is capped at 10,000 event IDs** (Remove Duplicates `historySize`, set explicitly). The design notes record that new notifications error once it is full. Ample for a demo; not for production.
 6. **"Sent" means accepted by the SMTP server.** Bounces and complaints are not fed back.
@@ -173,7 +173,7 @@ These are true of the code today. Fixes for the ones that matter in production a
 11. **No retention jobs.** Audit log, outbox, reminders and automation errors are kept indefinitely.
 12. **n8n error executions keep their full input for 7 days**, including the recipient's email.
 13. **Free-text fields are only as private as what people type.** Tool names appear on the public landing page; descriptions are visible to every signed-in neighbour.
-14. **A late return can be inferred from the API.** `tools.browse` and `tools.get` return the active loan's end date to any signed-in user (never who has the tool). The UI shows "On loan" once that date has passed, but the raw response still shows it. Returning only `on_loan` after the end date would close this.
+14. **A bare "On loan" still hints at a late return.** Once an active loan passes its end date, `tools.browse` and `tools.get` stop returning the date to anyone but the owner, the borrower and admins (they get `{ state: "on_loan" }`), so the overdue fact itself is not exposed. A neighbour who saw "Back Nov 12" earlier and sees "On loan" later can still infer it; hiding due dates from everyone would remove that signal at a UX cost.
 15. **Replaying a notification twice emails twice**, by design (each replay is a new event ID); the admin console asks for confirmation before a second replay.
 16. **Browser E2E and the automation E2E run locally only.** CI runs everything that needs no Clerk instance or Docker stack.
 17. **Single tenancy.** One neighbourhood; every signed-in user can browse every listing.
