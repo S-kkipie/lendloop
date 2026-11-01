@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { useId } from "react";
 import type { Availability } from "@/convex/lib/tools";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,10 +29,15 @@ interface ToolCardProps {
 const frame =
   "group/tool-card relative grid h-full grid-rows-[auto_1fr_auto] gap-3 rounded-xl border border-border bg-card p-4";
 
+// Stretched link (as in components/admin/shared.tsx): only the name is the
+// link, so its accessible name is exactly its visible text (WCAG 2.5.3, axe
+// label-content-name-mismatch), and its ::after covers the card so the whole
+// card stays one click target with one focus ring.
+const stretchedLink =
+  "rounded-sm after:absolute after:inset-0 after:rounded-xl after:content-[''] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-ring focus-visible:after:outline-solid";
+
 /** One tool in the Browse grid: ledger number, name, facts, lender, availability. */
 export function ToolCard({ tool, number, href }: ToolCardProps) {
-  const nameId = useId();
-
   const body = (
     <>
       <div className="flex items-center justify-between gap-3">
@@ -41,8 +45,14 @@ export function ToolCard({ tool, number, href }: ToolCardProps) {
         <AvailabilityBadge availability={tool.availability} />
       </div>
       <div className="grid content-start gap-1.5">
-        <h2 id={nameId} className="line-clamp-2 text-[0.9375rem] leading-snug font-semibold tracking-title [overflow-wrap:anywhere]">
-          {tool.name}
+        <h2 className="line-clamp-2 text-[0.9375rem] leading-snug font-semibold tracking-title [overflow-wrap:anywhere]">
+          {href ? (
+            <Link href={href} className={stretchedLink}>
+              {tool.name}
+            </Link>
+          ) : (
+            tool.name
+          )}
         </h2>
         <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-[0.8125rem] text-muted-foreground">
           {tool.category ? (
@@ -75,13 +85,9 @@ export function ToolCard({ tool, number, href }: ToolCardProps) {
   }
 
   return (
-    <Link
-      href={href}
-      aria-labelledby={nameId}
-      className={`${frame} transition-[border-color,background-color] duration-(--dur-row) hover:border-input hover:bg-accent/40`}
-    >
+    <div className={`${frame} transition-[border-color,background-color] duration-(--dur-row) hover:border-input hover:bg-accent/40`}>
       {body}
-    </Link>
+    </div>
   );
 }
 

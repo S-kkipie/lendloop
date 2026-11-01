@@ -5,6 +5,10 @@
 // a leaked production deploy key can't wipe data through them.
 //   pnpm db:reset-demo                      empty the app tables, then re-seed
 //   npx convex run devtools:purgeE2E        remove what the automation E2E created
+//   npx convex run devtools:purgeE2E '{"clerkIds":["user_…"]}'
+//                                           also remove these users (the Playwright
+//                                           suite's real Clerk test accounts)
+import { v } from "convex/values";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { appError } from "./lib/errors";
@@ -26,6 +30,8 @@ export const APP_TABLES = [
 
 /** Users the automation E2E creates: their Clerk subject starts with this. */
 export const E2E_CLERK_PREFIX = "e2e_";
+/** Explicit clerkIds per call (the Playwright suite passes its two test users). */
+export const MAX_PURGE_CLERK_IDS = 20;
 
 function requireDevTools(): void {
   if (process.env.ALLOW_DEV_TOOLS !== "true") {
@@ -53,14 +59,29 @@ export const resetDemo = internalMutation({
 });
 
 export const purgeE2E = internalMutation({
-  args: {},
-  handler: async (ctx) => {
+  // Users whose clerkId starts with "e2e_", plus any listed here: Clerk test
+  // accounts get real Clerk IDs ("user_…"), so the prefix can't find them.
+  args: { clerkIds: v.optional(v.array(v.string())) },
+  handler: async (ctx, args) => {
     requireDevTools();
+    const listed = [...new Set(args.clerkIds ?? [])];
+    if (listed.length > MAX_PURGE_CLERK_IDS) {
+      throw appError("INVALID", `At most ${MAX_PURGE_CLERK_IDS} clerkIds per call`);
+    }
     // Index range for the prefix: "`" is the character right after "_".
-    const users = await ctx.db
+    const prefixed = await ctx.db
       .query("users")
       .withIndex("by_clerkId", (q) => q.gte("clerkId", E2E_CLERK_PREFIX).lt("clerkId", "e2e`"))
       .collect();
+    const users = [...prefixed];
+    for (const clerkId of listed) {
+      if (clerkId.startsWith(E2E_CLERK_PREFIX)) continue; // already in the range above
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
+        .unique();
+      if (user) users.push(user);
+    }
     const userIds = new Set<Id<"users">>(users.map((u) => u._id));
 
     const tools: Doc<"tools">[] = [];

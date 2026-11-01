@@ -19,7 +19,8 @@
     "stack:down": "docker compose --env-file n8n/.env down",
     "seed": "convex run seed:demo",
     "db:reset-demo": "convex run devtools:resetDemo",
-    "e2e:automation": "tsx scripts/e2e-automation.ts"
+    "e2e:automation": "tsx scripts/e2e-automation.ts",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -43,7 +44,10 @@
     "svix": "~2.9.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@clerk/testing": "^2.2.53",
     "@edge-runtime/vm": "^5.0.0",
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

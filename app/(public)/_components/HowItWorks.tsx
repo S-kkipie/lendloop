@@ -61,10 +61,9 @@ export function HowItWorks() {
             <p className="col-start-2 text-[0.9375rem] leading-relaxed text-muted-foreground sm:col-start-3 sm:row-start-1">
               {step.text}
             </p>
-            <p
-              aria-label={`Shows as ${step.stamps.map((s) => s.label).join(", then ")}`}
-              className="col-start-2 flex flex-wrap items-center gap-1.5 sm:col-start-3 xl:col-start-4 xl:row-start-1 xl:justify-end"
-            >
+            {/* aria-label is not allowed on a <p>: the spoken version is sr-only text. */}
+            <p className="col-start-2 flex flex-wrap items-center gap-1.5 sm:col-start-3 xl:col-start-4 xl:row-start-1 xl:justify-end">
+              <span className="sr-only">Shows as {step.stamps.map((s) => s.label).join(", then ")}</span>
               {step.stamps.map((stamp, stampIndex) => (
                 <span key={stamp.label} className="inline-flex items-center gap-1.5" aria-hidden="true">
                   {stampIndex > 0 ? <ArrowRightIcon weight="bold" className="size-3 text-muted-foreground" /> : null}

@@ -50,6 +50,7 @@ describe("guard", () => {
     const before = await contents(t);
     await expectCode(t.mutation(internal.devtools.resetDemo, {}), "FORBIDDEN");
     await expectCode(t.mutation(internal.devtools.purgeE2E, {}), "FORBIDDEN");
+    await expectCode(t.mutation(internal.devtools.purgeE2E, { clerkIds: ["seed_marta"] }), "FORBIDDEN");
     expect(await contents(t)).toEqual(before);
   });
 });
@@ -161,6 +162,41 @@ describe("purgeE2E", () => {
       };
     });
     expect(leftovers).toEqual({ events: [], audits: [], errors: [], reminders: [] });
+  });
+
+  test("also removes explicitly listed users (Playwright's Clerk test accounts) and what they touched", async () => {
+    const t = setupTest();
+    await t.mutation(internal.seed.demo, {});
+    const w = await seedWorld(t);
+    const keep = await contents(t);
+    const owner = t.withIdentity(e2eIdentity("user_2pwOwner", "Odalys Ownerton"));
+    const borrower = t.withIdentity(e2eIdentity("user_2pwBorrower", "Bertil Borrowman"));
+    await owner.mutation(api.users.syncMe, {});
+    await borrower.mutation(api.users.syncMe, {});
+    const tool = await owner.mutation(api.tools.create, {
+      name: "Playwright ladder",
+      category: "ladders",
+      condition: "good",
+      description: "",
+    });
+    await borrower.mutation(api.loans.request, { toolId: tool, startDate: "2026-11-04", endDate: "2026-11-05" });
+    await borrower.mutation(api.loans.request, { toolId: w.toolId, startDate: "2026-11-10", endDate: "2026-11-11" });
+
+    vi.stubEnv("ALLOW_DEV_TOOLS", "true");
+    // Without the list, real Clerk IDs are out of reach of the prefix.
+    expect(await t.mutation(internal.devtools.purgeE2E, {})).toMatchObject({ users: 0 });
+    const result = await t.mutation(internal.devtools.purgeE2E, {
+      clerkIds: ["user_2pwOwner", "user_2pwBorrower", "user_2pwBorrower", "user_unknown"],
+    });
+    expect(result).toMatchObject({ users: 2, tools: 1, loans: 2 });
+    expect(await contents(t)).toEqual(keep);
+  });
+
+  test("rejects an oversized clerkIds list", async () => {
+    const t = setupTest();
+    vi.stubEnv("ALLOW_DEV_TOOLS", "true");
+    const clerkIds = Array.from({ length: 21 }, (_, i) => `user_${i}`);
+    await expectCode(t.mutation(internal.devtools.purgeE2E, { clerkIds }), "INVALID");
   });
 
   test("is a no-op when there is nothing to purge", async () => {
