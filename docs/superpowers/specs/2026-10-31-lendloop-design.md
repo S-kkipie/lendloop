@@ -266,7 +266,7 @@ This is the only file allowed to import raw `query` / `mutation` / `action` from
 3. Sign and POST to `N8N_WEBHOOK_URL`, 10 s timeout.
 4. Outcome:
    - 2xx → `delivered`.
-   - 5xx, 408, 429, network error or timeout → `retrying` with backoff 30 s, 2 min, 10 min, 1 h, 6 h; after 5 attempts → `dead` (admin alert).
+   - 5xx, 408, 429, network error or timeout → `retrying` with backoff: 5 attempts in total, waiting 30 s, 2 min, 10 min and 1 h between them (about 73 minutes), then `dead` (admin alert).
    - Any other 4xx (for example a rejected signature, meaning broken configuration) → `dead` immediately, no retry.
 
 **Write-back from n8n:** after the email is sent, n8n calls `POST /n8n/notifications/status` → `sent`. On final failure the error workflow reports → `failed`.
@@ -355,7 +355,7 @@ Error Trigger → Code: sanitize (workflow, executionId, node, truncated message
 | Method + path | Caller | Auth | Behaviour | Idempotency |
 |---|---|---|---|---|
 | `GET /n8n/overdue-loans` | n8n | HMAC (inbound secret) | Records heartbeat check-in. Returns ≤ 200 active loans with `endDate < today` and no `sent` reminder today: `{loanId, idempotencyKey, borrower:{email, firstName}, tool:{name}, endDate, daysOverdue}` | read; re-running the same day returns nothing already reminded |
-| `POST /n8n/reminders` | n8n | HMAC | `recordReminder` | by `idempotencyKey`; only `failed → sent` upgrades allowed; Convex re-validates that the key equals `loanId:today` and the loan is still overdue |
+| `POST /n8n/reminders` | n8n | HMAC | `recordReminder` | by `idempotencyKey`; only `failed → sent` upgrades allowed; Convex re-validates that the key equals `loanId:today` and that the loan is `active` (or was returned after the fetch) |
 | `POST /n8n/notifications/status` | n8n | HMAC | outbox `pending`/`retrying`/`delivered` → `sent` (the write-back can race ahead of Convex recording `delivered`; `markDelivered` never downgrades `sent` or `failed`) | setting the same status twice is a no-op |
 | `POST /n8n/automation-errors` | n8n | HMAC | insert `automationErrors`; with `eventId` marks the outbox event `failed` | by `executionId` |
 | `POST /clerk/webhook` | Clerk | Svix (`svix` `Webhook.verify`) | `user.updated`, `user.deleted` | handlers are naturally idempotent (upsert, anonymize); delivery is at-least-once and unordered, so `user.updated` is ignored for already-deleted users |
