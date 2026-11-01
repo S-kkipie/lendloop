@@ -1,5 +1,6 @@
 // Static lint of the exported n8n workflows: no secrets, only allowlisted
-// placeholders, retries on every network/email node, error routing, raw body.
+// placeholders, retries on every network node, error routing, raw body, and
+// email only through the mail API with an idempotency key.
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -35,8 +36,10 @@ const SECRET_PATTERNS = [
   /pk_(test|live)_/,
   /"password"\s*:\s*"[^"{]/i,
   /hmacSecret/,
+  /\bre_[A-Za-z0-9_]{8,}/, // Resend API keys
 ];
-const ALLOWED_PLACEHOLDERS = new Set(["{{CONVEX_SITE_URL}}", "{{MAIL_FROM}}", "{{OPS_EMAIL}}"]);
+const ALLOWED_PLACEHOLDERS = new Set(["{{CONVEX_SITE_URL}}", "{{MAIL_API_URL}}", "{{MAIL_FROM}}", "{{OPS_EMAIL}}"]);
+const MAIL_NODES = ["Send email", "Send reminder", "Email ops"];
 
 test("exactly the three LendLoop workflows are exported", () => {
   expect(parsed.map((w) => w.json.id).sort()).toEqual(["llErrorHandler001", "llLoanNotify0001", "llOverdueRemind01"]);
@@ -55,8 +58,8 @@ describe.each(parsed)("$file", ({ raw, json }) => {
     for (const placeholder of found) expect(ALLOWED_PLACEHOLDERS.has(placeholder), placeholder).toBe(true);
   });
 
-  test("network and email nodes retry", () => {
-    for (const node of json.nodes.filter((n) => /httpRequest|emailSend/.test(n.type))) {
+  test("network nodes retry", () => {
+    for (const node of json.nodes.filter((n) => n.type === "n8n-nodes-base.httpRequest")) {
       expect(node.retryOnFail, node.name).toBe(true);
       expect(node.maxTries ?? 0, node.name).toBeGreaterThanOrEqual(3);
       expect(node.waitBetweenTries ?? 0, node.name).toBeGreaterThanOrEqual(1000);
@@ -78,9 +81,23 @@ describe.each(parsed)("$file", ({ raw, json }) => {
     for (const match of raw.matchAll(/\$\('([^']+)'\)/g)) expect(names.has(match[1]), match[1]).toBe(true);
   });
 
-  test("emails carry no n8n attribution", () => {
-    for (const node of json.nodes.filter((n) => n.type === "n8n-nodes-base.emailSend")) {
-      expect((node.parameters.options as Record<string, unknown>)?.appendAttribution, node.name).toBe(false);
+  test("email goes only through the mail API, with an idempotency key", () => {
+    expect(json.nodes.filter((n) => n.type === "n8n-nodes-base.emailSend")).toEqual([]);
+    for (const node of json.nodes.filter((n) => MAIL_NODES.includes(n.name))) {
+      expect(node.type, node.name).toBe("n8n-nodes-base.httpRequest");
+      expect(node.parameters, node.name).toMatchObject({
+        method: "POST",
+        url: "{{MAIL_API_URL}}/emails",
+        authentication: "genericCredentialType",
+        genericAuthType: "httpHeaderAuth",
+      });
+      expect(node.credentials?.httpHeaderAuth.id, node.name).toBe("llMailApi0000001");
+      const headers = (node.parameters.headerParameters as { parameters: { name: string; value: string }[] }).parameters;
+      const key = headers.find((h) => h.name === "Idempotency-Key")?.value ?? "";
+      // An expression over the event or reminder identity, so every retry reuses the key.
+      expect(key, node.name).toMatch(/^=lendloop-.*\{\{ .+ \}\}$/);
+      const body = (node.parameters.bodyParameters as { parameters: { name: string }[] }).parameters;
+      expect(body.map((p) => p.name), node.name).toEqual(["from", "to", "subject", "text"]);
     }
   });
 
@@ -91,6 +108,11 @@ describe.each(parsed)("$file", ({ raw, json }) => {
       expect(() => JSON.parse(body), node.name).not.toThrow();
     }
   });
+});
+
+test("every email node is present (one per workflow)", () => {
+  const names = parsed.flatMap((w) => w.json.nodes.map((n) => n.name)).filter((n) => MAIL_NODES.includes(n));
+  expect(names.sort()).toEqual([...MAIL_NODES].sort());
 });
 
 test("main workflows route failures to the error handler", () => {

@@ -250,26 +250,57 @@
     {
       "id": "c1cf4db3-afde-5888-8e8a-2809c6f55984",
       "name": "Send email",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         2200,
         100
       ],
       "parameters": {
-        "fromEmail": "{{MAIL_FROM}}",
-        "toEmail": "={{ $json.to }}",
-        "subject": "={{ $json.subject }}",
-        "emailFormat": "text",
-        "text": "={{ $json.text }}",
+        "method": "POST",
+        "url": "{{MAIL_API_URL}}/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "=lendloop-{{ $json.eventId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "from",
+              "value": "{{MAIL_FROM}}"
+            },
+            {
+              "name": "to",
+              "value": "={{ $json.to }}"
+            },
+            {
+              "name": "subject",
+              "value": "={{ $json.subject }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.text }}"
+            }
+          ]
+        },
         "options": {
-          "appendAttribution": false
+          "timeout": 10000
         }
       },
       "credentials": {
-        "smtp": {
-          "id": "llSmtp0000000001",
-          "name": "LendLoop SMTP"
+        "httpHeaderAuth": {
+          "id": "llMailApi0000001",
+          "name": "LendLoop Mail API"
         }
       },
       "retryOnFail": true,
@@ -360,7 +391,7 @@
         260
       ],
       "parameters": {
-        "jsCode": "// Send email exhausted its retries: report it with the event ID so Convex marks\n// the outbox event failed (and an admin can replay it). Emails are stripped.\nconst PATH = '/n8n/automation-errors';\nconst { eventId } = $('Compose email').first().json;\nconst error = $input.first().json.error;\nconst detail = typeof error === 'string' ? error : (error && error.message) || 'Email could not be sent';\nconst message = String(detail).replace(/[^\\s@<>\"']+@[^\\s@<>\"']+/g, '[email]').slice(0, 500);\nconst body = JSON.stringify({\n  workflow: $workflow.name,\n  executionId: String($execution.id),\n  node: 'Send email',\n  message,\n  eventId,\n});\nconst ts = String(Math.floor(Date.now() / 1000));\nreturn [{ json: { body, ts, canonical: `${ts}.POST.${PATH}.${body}` } }];\n"
+        "jsCode": "// Send email exhausted its retries: report it with the event ID so Convex marks\n// the outbox event failed (and an admin can replay it). Emails are stripped.\nconst PATH = '/n8n/automation-errors';\nconst { eventId } = $('Compose email').first().json;\nconst error = $input.first().json.error;\n// The HTTP node puts the mail API's response body (the actual reason) in `description`.\nconst detail = typeof error === 'string'\n  ? error\n  : [error && error.message, error && error.description].filter(Boolean).join(': ') || 'Email could not be sent';\nconst message = String(detail).replace(/[^\\s@<>\"']+@[^\\s@<>\"']+/g, '[email]').slice(0, 500);\nconst body = JSON.stringify({\n  workflow: $workflow.name,\n  executionId: String($execution.id),\n  node: 'Send email',\n  message,\n  eventId,\n});\nconst ts = String(Math.floor(Date.now() / 1000));\nreturn [{ json: { body, ts, canonical: `${ts}.POST.${PATH}.${body}` } }];\n"
       }
     },
     {

@@ -224,10 +224,11 @@ async function main() {
   const reminders = (await mailTo(borrower.email, "Reminder: please return")).length;
   record("second reminder run sends nothing", reminders === 1, `borrower reminders: ${reminders}`);
 
-  // 7. SMTP failing: the send fails after its retries and Convex marks the event
-  // failed. Mailpit chaos rejects every recipient with a 451, which fails fast and
-  // deterministically (a stopped container fails after variable network timeouts,
-  // and a retry may then succeed once it is back).
+  // 7. Mail failing: the send fails after its retries and Convex marks the event
+  // failed. Mailpit chaos rejects every recipient with a 451, so the local mail API
+  // answers 502 and n8n's HTTP send fails fast and deterministically (a stopped
+  // container fails after variable network timeouts, and a retry may then succeed
+  // once it is back).
   let failed: OutboxEvent | undefined;
   let failureErrorId: string | undefined;
   await chaos({ Recipient: { ErrorCode: 451, Probability: 100 } });
@@ -241,7 +242,7 @@ async function main() {
     const error = health3.errors.find((e) => failed && e.eventId === failed._id);
     failureErrorId = error?._id;
     record(
-      "SMTP failure reaches Convex",
+      "mail failure reaches Convex",
       Boolean(failed) && Boolean(error) && health3.problems.some((p) => p._id === failed?._id),
       failed ? `event failed; error from ${error?.workflow}/${error?.node}` : "event not failed within 90 s",
     );
@@ -249,7 +250,7 @@ async function main() {
     await chaos({});
   }
 
-  // 8. The admin replay (a new event ID) delivers once SMTP works again.
+  // 8. The admin replay (a new event ID) delivers once mail works again.
   if (failed) {
     const replayId = convex("admin:replayEvent", { eventId: failed._id }, admin) as string;
     const replayed = await until(60_000, async () => {

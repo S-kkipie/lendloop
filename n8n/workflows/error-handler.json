@@ -90,26 +90,57 @@
     {
       "id": "5e28db72-7344-5bf5-af04-fb7021a4ea2b",
       "name": "Email ops",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         880,
         400
       ],
       "parameters": {
-        "fromEmail": "{{MAIL_FROM}}",
-        "toEmail": "{{OPS_EMAIL}}",
-        "subject": "LendLoop automation failure",
-        "emailFormat": "text",
-        "text": "=An automation failed and could not be reported to Convex.\n\nWorkflow: {{ $('Sanitize error').first().json.workflow }}\nNode: {{ $('Sanitize error').first().json.node }}\nExecution: {{ $('Sanitize error').first().json.executionId }}\n\nLendLoop",
+        "method": "POST",
+        "url": "{{MAIL_API_URL}}/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "=lendloop-ops-{{ $('Sanitize error').first().json.executionId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "from",
+              "value": "{{MAIL_FROM}}"
+            },
+            {
+              "name": "to",
+              "value": "{{OPS_EMAIL}}"
+            },
+            {
+              "name": "subject",
+              "value": "LendLoop automation failure"
+            },
+            {
+              "name": "text",
+              "value": "=An automation failed and could not be reported to Convex.\n\nWorkflow: {{ $('Sanitize error').first().json.workflow }}\nNode: {{ $('Sanitize error').first().json.node }}\nExecution: {{ $('Sanitize error').first().json.executionId }}\n\nLendLoop"
+            }
+          ]
+        },
         "options": {
-          "appendAttribution": false
+          "timeout": 10000
         }
       },
       "credentials": {
-        "smtp": {
-          "id": "llSmtp0000000001",
-          "name": "LendLoop SMTP"
+        "httpHeaderAuth": {
+          "id": "llMailApi0000001",
+          "name": "LendLoop Mail API"
         }
       },
       "retryOnFail": true,

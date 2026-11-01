@@ -7,7 +7,7 @@
 set -eu
 
 for name in N8N_ENCRYPTION_KEY LENDLOOP_N8N_WEBHOOK_SECRET LENDLOOP_CONVEX_INBOUND_SECRET \
-  CONVEX_SITE_URL MAIL_FROM OPS_EMAIL SMTP_HOST SMTP_PORT; do
+  CONVEX_SITE_URL MAIL_API_URL MAIL_API_KEY MAIL_FROM OPS_EMAIL; do
   eval "value=\${$name:-}"
   if [ -z "$value" ]; then
     echo "lendloop-entrypoint: $name is required (run pnpm setup:local)" >&2
@@ -22,12 +22,12 @@ trap 'rm -rf "$WORK"' EXIT INT TERM
 mkdir "$WORK/workflows"
 export WORK
 
-# 1. Render workflows: only these three placeholders are substituted.
+# 1. Render workflows: only these four placeholders are substituted.
 node <<'JS'
 const fs = require("node:fs");
 const path = require("node:path");
 const src = "/opt/lendloop/workflows";
-const placeholders = ["CONVEX_SITE_URL", "MAIL_FROM", "OPS_EMAIL"];
+const placeholders = ["CONVEX_SITE_URL", "MAIL_API_URL", "MAIL_FROM", "OPS_EMAIL"];
 for (const file of fs.readdirSync(src).filter((f) => f.endsWith(".json"))) {
   let text = fs.readFileSync(path.join(src, file), "utf8");
   // Placeholders sit inside JSON strings, so values are inserted JSON-escaped.
@@ -52,17 +52,12 @@ const credentials = [
     data: { hmacSecret: env.LENDLOOP_N8N_WEBHOOK_SECRET_PREVIOUS || env.LENDLOOP_N8N_WEBHOOK_SECRET },
   },
   { id: "llCryptoOutbound1", name: "LendLoop: n8n→Convex HMAC", type: "crypto", data: { hmacSecret: env.LENDLOOP_CONVEX_INBOUND_SECRET } },
+  // Resend's email API in production, the local stand-in (n8n/local-mail-api.ts) in compose.
   {
-    id: "llSmtp0000000001",
-    name: "LendLoop SMTP",
-    type: "smtp",
-    data: {
-      user: env.SMTP_USER ?? "",
-      password: env.SMTP_PASS ?? "",
-      host: env.SMTP_HOST,
-      port: Number(env.SMTP_PORT),
-      secure: env.SMTP_SECURE === "true",
-    },
+    id: "llMailApi0000001",
+    name: "LendLoop Mail API",
+    type: "httpHeaderAuth",
+    data: { name: "Authorization", value: `Bearer ${env.MAIL_API_KEY}` },
   },
 ];
 fs.writeFileSync(`${env.WORK}/credentials.json`, JSON.stringify(credentials), { mode: 0o600 });

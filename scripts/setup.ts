@@ -34,12 +34,10 @@ const DEFAULTS: [string, string][] = [
   ["CONVEX_SITE_URL", "http://host.docker.internal:3211"],
   ["MAIL_FROM", "LendLoop <no-reply@lendloop.local>"],
   ["OPS_EMAIL", "ops@lendloop.local"],
-  ["SMTP_HOST", "mailpit"],
-  ["SMTP_PORT", "1025"],
-  ["SMTP_USER", ""],
-  ["SMTP_PASS", ""],
-  ["SMTP_SECURE", "false"],
+  ["MAIL_API_URL", "http://mail-api:8080"],
 ];
+// Keys earlier versions wrote (n8n used to send over SMTP); removed on the next run.
+const OBSOLETE = ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_SECURE"];
 
 // docker compose interpolates "$" in env files, so the bcrypt hash is stored with "$$".
 const escapeDollars = (value: string) => value.replaceAll("$", () => "$$");
@@ -113,7 +111,11 @@ async function main() {
       ensure(key, () => randomSecret());
     }
   }
+  ensure("MAIL_API_KEY", () => randomSecret());
   ensure("N8N_OWNER_PASSWORD", () => randomBytes(24).toString("base64url"));
+  for (const key of OBSOLETE) {
+    if (env.delete(key)) created.push(`${key} (removed)`);
+  }
   for (const [key, value] of DEFAULTS) {
     if (env.has(key)) continue;
     env.set(key, value);

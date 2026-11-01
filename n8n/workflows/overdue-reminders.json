@@ -133,26 +133,57 @@
     {
       "id": "ba9a1910-3943-5ea1-8e65-03544692ad41",
       "name": "Send reminder",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         1320,
         300
       ],
       "parameters": {
-        "fromEmail": "{{MAIL_FROM}}",
-        "toEmail": "={{ $json.to }}",
-        "subject": "={{ $json.subject }}",
-        "emailFormat": "text",
-        "text": "={{ $json.text }}",
+        "method": "POST",
+        "url": "{{MAIL_API_URL}}/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "=lendloop-reminder-{{ $json.idempotencyKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "from",
+              "value": "{{MAIL_FROM}}"
+            },
+            {
+              "name": "to",
+              "value": "={{ $json.to }}"
+            },
+            {
+              "name": "subject",
+              "value": "={{ $json.subject }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.text }}"
+            }
+          ]
+        },
         "options": {
-          "appendAttribution": false
+          "timeout": 10000
         }
       },
       "credentials": {
-        "smtp": {
-          "id": "llSmtp0000000001",
-          "name": "LendLoop SMTP"
+        "httpHeaderAuth": {
+          "id": "llMailApi0000001",
+          "name": "LendLoop Mail API"
         }
       },
       "retryOnFail": true,
@@ -185,7 +216,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Sanitized: no email addresses, at most 300 characters.\nconst { loanId, idempotencyKey } = $('Compose reminder').item.json;\nconst raw = typeof $json.error === 'string' ? $json.error : ($json.error && $json.error.message) || 'Email could not be sent';\nconst error = String(raw).replace(/[^\\s@<>\"']+@[^\\s@<>\"']+/g, '[email]').slice(0, 300);\nreturn { json: { loanId, idempotencyKey, status: 'failed', error } };\n"
+        "jsCode": "// Sanitized: no email addresses, at most 300 characters.\nconst { loanId, idempotencyKey } = $('Compose reminder').item.json;\n// The HTTP node puts the mail API's response body (the actual reason) in `description`.\nconst e = $json.error;\nconst raw = typeof e === 'string' ? e : [e && e.message, e && e.description].filter(Boolean).join(': ') || 'Email could not be sent';\nconst error = String(raw).replace(/[^\\s@<>\"']+@[^\\s@<>\"']+/g, '[email]').slice(0, 300);\nreturn { json: { loanId, idempotencyKey, status: 'failed', error } };\n"
       }
     },
     {

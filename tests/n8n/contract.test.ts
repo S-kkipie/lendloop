@@ -250,6 +250,26 @@ describe("write-backs are accepted by Convex", () => {
     await expectAcceptedByConvex(prepared, "POST", "/n8n/automation-errors");
   });
 
+  test("Prepare failure report: an HTTP error keeps the mail API's reason from its description", async () => {
+    const [prepared] = await run(codeOf("loan-notifications.json", "Prepare failure report"), {
+      input: [
+        {
+          json: {
+            error: {
+              message: "Bad gateway - the service failed to handle your request",
+              description: '{"name":"smtp_error","message":"SMTP 451 4.7.1 <ana@example.com> try later"}',
+            },
+          },
+        },
+      ],
+      nodes: { "Compose email": [{ json: { eventId: "evt_1" } }] },
+    });
+    const { message } = JSON.parse(String(prepared.body));
+    expect(message).toContain("Bad gateway");
+    expect(message).toContain("SMTP 451");
+    expect(message).not.toMatch(/ana@example\.com/);
+  });
+
   test("Prepare overdue request: signed GET /n8n/overdue-loans matches the shared vector", async () => {
     const vector = vectors.cases.find((c) => c.method === "GET" && c.path === "/n8n/overdue-loans")!;
     setNow(Number(vector.timestamp));

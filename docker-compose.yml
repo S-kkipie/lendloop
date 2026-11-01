@@ -17,6 +17,18 @@ services:
     environment:
       MP_ENABLE_CHAOS: "true" # lets the E2E make SMTP fail on demand (local only)
     ports: ["${MAILPIT_UI_PORT:-8025}:8025"]
+  # Local stand-in for Resend's email API: n8n sends the same request as in
+  # production, and this relays it to Mailpit over SMTP. Not exposed on the host.
+  mail-api:
+    image: node:24.15.0-alpine
+    user: node
+    command: ["node", "/app/local-mail-api.ts"]
+    volumes: ["./n8n/local-mail-api.ts:/app/local-mail-api.ts:ro"]
+    environment:
+      MAIL_API_KEY: ${MAIL_API_KEY:?run pnpm setup:local}
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+    depends_on: [mailpit]
   n8n:
     build: ./n8n
     env_file: [./n8n/.env]
@@ -33,6 +45,6 @@ services:
     extra_hosts: ["host.docker.internal:host-gateway"]
     depends_on:
       postgres: { condition: service_healthy }
-      mailpit: { condition: service_started }
+      mail-api: { condition: service_started }
 volumes:
   postgres-data:
