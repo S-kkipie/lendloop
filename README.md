@@ -4,15 +4,13 @@
 
 LendLoop is a tool-lending board for a neighbourhood. Neighbours list tools they are willing to lend, request each other's tools for a date range, and get email updates and overdue reminders sent by n8n. Owners approve, hand over and confirm returns; every step is on the record. It is built with Next.js (App Router), Clerk, Convex, n8n and TypeScript, with signed webhooks in both directions, role-based access enforced in one place, and as little personal data in motion as the job allows.
 
-<!-- TODO(screenshots): add the images below once docs/screenshots/*.png exist -->
-
 | | |
 |---|---|
 | ![Landing page: live register of available tools, no personal data](docs/screenshots/landing.png) | ![Browse: tools with owner display name and availability](docs/screenshots/browse.png) |
 | ![Tool detail with booking calendar](docs/screenshots/tool-detail.png) | ![Incoming requests with an overlap warning](docs/screenshots/incoming.png) |
 | ![Loan timeline with automation entries](docs/screenshots/timeline.png) | ![Admin console, automation tab](docs/screenshots/admin-automation.png) |
 
-**Live demo:** <!-- TODO(live): demo URL --> Test accounts (an admin and a regular neighbour): credentials are in the submission email. Details in [docs/production.md](docs/production.md#live-demo).
+**Live demo:** <https://lendloop-steel.vercel.app>. Test accounts (an admin and a regular neighbour): credentials are in the submission email. Details in [docs/production.md](docs/production.md#live-demo).
 
 ## Contents
 

@@ -8,20 +8,20 @@ Related: [security known limitations](security.md#known-limitations), [runbook](
 
 | | |
 |---|---|
-| App | <!-- TODO(live): Vercel production URL --> |
-| Convex health | <!-- TODO(live): https://<deployment>.convex.site/health --> |
-| n8n | <!-- TODO(live): Railway n8n public URL (webhook only; the editor login is private) --> |
+| App | <https://lendloop-steel.vercel.app> |
+| Convex health | <https://ideal-oriole-101.convex.site/health> |
+| n8n | <https://n8n-production-4cde.up.railway.app> (webhook only; the editor login is private) |
 | Email | Resend email API (HTTPS), sending domain `lendloop.aido.lat`, from `LendLoop <no-reply@lendloop.aido.lat>` |
 | Identity | Clerk development instance |
 | Test accounts | An admin and a regular neighbour; credentials are in the submission email, never in the repo |
 
-<!-- TODO(live): date the demo was last verified (sign-in, request → email, reminders run, admin automation tab healthy) -->
+Last verified on 2026-11-01: password sign-in with both test accounts; request, approval with an overlapping request auto-declined, handover and cancellation, each email accepted by Resend and written back as `sent` on the first attempt; the reminders workflow run by hand, its reminder recorded and the heartbeat fresh; the admin automation tab shows nothing stuck. The screenshots in the README come from that run.
 
 ### How the demo is deployed
 
 | Piece | Where | Notes |
 |---|---|---|
-| Next.js | Vercel, from the GitHub repo | Build command `npx convex deploy --cmd 'pnpm build'` with `CONVEX_DEPLOY_KEY`, so Convex functions and the frontend ship together |
+| Next.js | Vercel, from the GitHub repo | `vercel.json` sets the build command `pnpm exec convex deploy --cmd 'pnpm build'` with `CONVEX_DEPLOY_KEY` (production only), so Convex functions and the frontend ship together; Dependabot branches do not deploy. Env: `CONVEX_DEPLOY_KEY`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_REPO_URL`, `ENABLE_EXPERIMENTAL_COREPACK=1` (pnpm 12 from `packageManager`) |
 | Convex | production deployment | Env: `CLERK_JWT_ISSUER_DOMAIN`, `APP_URL` (the Vercel URL), `APP_TIMEZONE`, `N8N_WEBHOOK_URL` (Railway URL + `/webhook/lendloop-loan-events`), `N8N_WEBHOOK_SECRET`, `CONVEX_INBOUND_SECRET`, `CLERK_WEBHOOK_SIGNING_SECRET`. Never `ALLOW_DEV_TOOLS`. |
 | n8n | Railway service built from `n8n/Dockerfile`, Railway Postgres | Same image as local. Variables from `n8n/.env.example` with fresh production secrets, `CONVEX_SITE_URL` = the Convex `.convex.site` URL, `MAIL_API_URL`, `MAIL_API_KEY`, `MAIL_FROM`, `OPS_EMAIL`, `WEBHOOK_URL`, `N8N_EDITOR_BASE_URL`, `N8N_HOST` and `N8N_PROTOCOL` for the public Railway domain, `N8N_PROXY_HOPS=1` (Railway's edge proxy), `N8N_PORT=5678`, and `DB_POSTGRESDB_*` as references to the Postgres service. The hardening settings from [security.md](security.md#n8n-hardening), `DB_TYPE` and `N8N_SECURE_COOKIE=true` come from the image |
 | Email | Resend | `MAIL_API_URL=https://api.resend.com`, `MAIL_API_KEY` = a sending-only API key restricted to `lendloop.aido.lat`; SPF and DKIM records in Cloudflare DNS. Railway blocks outbound SMTP on the Hobby plan, which is why n8n uses the HTTPS API ([ADR 0011](adr/0011-email-through-resend-api.md)) |
