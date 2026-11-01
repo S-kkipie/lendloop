@@ -1,6 +1,7 @@
 # gitleaks configuration: the default rules, plus allowlists for test fixtures
-# only. Each entry needs BOTH a listed path and the exact fixture value
-# (condition = "AND"), so a real secret in those files is still reported.
+# only. Each entry needs BOTH a listed path and either the exact fixture value
+# or the commits that added it (condition = "AND"), so a real secret in those
+# files is still reported.
 # Run locally over the full history:
 #   docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest git /repo --redact
 
@@ -20,10 +21,10 @@ paths = ['''^convex/http\.test\.ts$''', '''^docs/superpowers/plans/2026-10-31-le
 regexes = ['''^convex\-inbound\-secret\-0123456789abcdef$''']
 
 [[allowlists]]
-description = "Fake Svix whsec_ signing secret that older commits of the Clerk webhook test and plan contained (history only; the test now generates it at runtime)."
+description = "Fake Svix signing secret that two old commits added to the Clerk webhook test and the Plan 2a doc. It never belonged to any account; the test now generates one per run, so the value is pinned by commit and appears nowhere in the tree."
 condition = "AND"
+commits = ["1b8a7a90c1d244a055fd23399f90b43c736f6b9c", "cb27a57c5db6c62be91ee4188b3298bd47e88487"]
 paths = ['''^convex/clerkWebhook\.test\.ts$''', '''^docs/superpowers/plans/2026-10-31-lendloop-2a-automation-convex\.md$''']
-regexes = ['''^whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw$''']
 
 [[allowlists]]
 description = "Rotation test secret in the n8n workflow contract tests."
