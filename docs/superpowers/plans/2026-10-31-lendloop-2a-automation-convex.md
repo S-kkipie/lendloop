@@ -1755,7 +1755,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { NOW, insertLoan, seedWorld, setupTest, type TestT } from "./test.helpers";
 
 // whsec_ + base64 of 32 bytes (test-only)
-const SECRET = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";
+const SECRET = randomWebhookSecret(); // whsec_ + random base64, generated per run
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -1788,7 +1788,7 @@ async function post(t: TestT, event: unknown, secret = SECRET) {
 
 test("rejects bad signatures", async () => {
   const t = setupTest();
-  const res = await post(t, { type: "user.deleted", data: { id: "user_alice" } }, "whsec_" + "A".repeat(32));
+  const res = await post(t, { type: "user.deleted", data: { id: "user_alice" } }, randomWebhookSecret());
   expect(res.status).toBe(401);
 });
 

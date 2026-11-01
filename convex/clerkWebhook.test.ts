@@ -2,8 +2,10 @@ import { Webhook } from "svix";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { NOW, insertLoan, seedWorld, setupTest, type TestT } from "./test.helpers";
 
-// whsec_ + base64 of 24 random bytes (test-only)
-const SECRET = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";
+// Svix secrets are "whsec_" + base64 bytes. Generated per run so no
+// secret-shaped literal lives in the repo (it triggered secret scanning).
+const randomWebhookSecret = () => `whsec_${btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(24))))}`;
+const SECRET = randomWebhookSecret();
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -36,7 +38,7 @@ async function post(t: TestT, event: unknown, secret = SECRET) {
 
 test("rejects bad signatures", async () => {
   const t = setupTest();
-  const res = await post(t, { type: "user.deleted", data: { id: "user_alice" } }, "whsec_" + "A".repeat(32));
+  const res = await post(t, { type: "user.deleted", data: { id: "user_alice" } }, randomWebhookSecret());
   expect(res.status).toBe(401);
 });
 
@@ -45,7 +47,7 @@ test("forged requests never drain the rate-limit bucket", async () => {
   await seedWorld(t);
   // More forgeries than the bucket's capacity (120), then a real event.
   for (let i = 0; i < 150; i++) {
-    expect((await post(t, { type: "user.deleted", data: { id: "user_alice" } }, "whsec_" + "A".repeat(32))).status).toBe(401);
+    expect((await post(t, { type: "user.deleted", data: { id: "user_alice" } }, randomWebhookSecret())).status).toBe(401);
   }
   const res = await post(t, { type: "user.deleted", data: { id: "user_nobody", deleted: true } });
   expect(res.status).toBe(200);
