@@ -40,6 +40,17 @@ test("rejects bad signatures", async () => {
   expect(res.status).toBe(401);
 });
 
+test("forged requests never drain the rate-limit bucket", async () => {
+  const t = setupTest();
+  await seedWorld(t);
+  // More forgeries than the bucket's capacity (120), then a real event.
+  for (let i = 0; i < 150; i++) {
+    expect((await post(t, { type: "user.deleted", data: { id: "user_alice" } }, "whsec_" + "A".repeat(32))).status).toBe(401);
+  }
+  const res = await post(t, { type: "user.deleted", data: { id: "user_nobody", deleted: true } });
+  expect(res.status).toBe(200);
+});
+
 test("user.updated refreshes name and email", async () => {
   const t = setupTest();
   const w = await seedWorld(t);

@@ -13,12 +13,12 @@ export function json(status: number, body: unknown): Response {
 export class InvalidBody extends Error {}
 
 // Every n8n → Convex endpoint goes through here, so none can skip a check.
+// The signature is verified before the shared rate-limit bucket is touched:
+// verifying is cheap, and unsigned junk must not be able to drain the bucket
+// that n8n's real write-backs depend on. It still gets a bare 401.
 export function signedEndpoint(handler: (ctx: ActionCtx, body: unknown) => Promise<Response>) {
   return httpAction(async (ctx, request) => {
     const path = new URL(request.url).pathname;
-    const { ok: withinLimit } = await rateLimiter.limit(ctx, "inboundHttp", { key: "n8n" });
-    if (!withinLimit) return json(429, { error: "rate_limited" });
-
     if (Number(request.headers.get("content-length") ?? "0") > MAX_BODY_BYTES) {
       return json(413, { error: "too_large" });
     }
@@ -45,6 +45,8 @@ export function signedEndpoint(handler: (ctx: ActionCtx, body: unknown) => Promi
       log.warn("inbound.rejected", { path, reason: verdict.reason });
       return json(401, { error: "unauthorized" });
     }
+    const { ok: withinLimit } = await rateLimiter.limit(ctx, "inboundHttp", { key: "n8n" });
+    if (!withinLimit) return json(429, { error: "rate_limited" });
 
     let body: unknown = null;
     if (raw) {

@@ -22,10 +22,9 @@ type UserDeleted = { type: "user.deleted"; data: { id?: string; deleted?: boolea
 type ClerkEvent = UserUpdated | UserDeleted | { type: string; data: unknown };
 
 // Svix-verified Clerk events. Delivery is at-least-once and unordered, so the
-// handlers are idempotent and never resurrect a deleted account.
+// handlers are idempotent and never resurrect a deleted account. As for the
+// n8n endpoints, only verified requests consume the rate-limit bucket.
 export const clerkWebhook = httpAction(async (ctx, request) => {
-  const { ok } = await rateLimiter.limit(ctx, "clerkWebhook", { key: "clerk" });
-  if (!ok) return json(429, { error: "rate_limited" });
   const secret = clerkWebhookSecret();
   if (!secret) return json(503, { error: "not_configured" });
 
@@ -43,6 +42,8 @@ export const clerkWebhook = httpAction(async (ctx, request) => {
     log.warn("clerk_webhook.rejected", {});
     return json(401, { error: "unauthorized" });
   }
+  const { ok } = await rateLimiter.limit(ctx, "clerkWebhook", { key: "clerk" });
+  if (!ok) return json(429, { error: "rate_limited" });
   let event: ClerkEvent;
   try {
     event = JSON.parse(payload) as ClerkEvent;

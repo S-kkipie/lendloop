@@ -70,6 +70,28 @@ describe("signature enforcement", () => {
     expect(res.status).toBe(401);
   });
 
+  test("unsigned junk never drains the shared rate-limit bucket", async () => {
+    const t = setupTest();
+    // 300 unsigned requests: more than the bucket's capacity (240).
+    for (let i = 0; i < 300; i++) {
+      const res = await t.fetch("/n8n/automation-errors", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ workflow: "w", executionId: String(i), message: "junk" }),
+      });
+      expect(res.status).toBe(401);
+    }
+    const signed = await signedFetch(t, "POST", "/n8n/automation-errors", { workflow: "w", executionId: "real", message: "m" });
+    expect(signed.status).toBe(200);
+  });
+
+  test("signed requests beyond the bucket get 429", async () => {
+    const t = setupTest();
+    const statuses = new Set<number>();
+    for (let i = 0; i < 245; i++) statuses.add((await signedFetch(t, "GET", "/n8n/overdue-loans")).status);
+    expect([...statuses].sort()).toEqual([200, 429]);
+  });
+
   test("not configured → 503; wrong content type → 415; oversize → 413; bad body → 400", async () => {
     const t = setupTest();
     vi.stubEnv("CONVEX_INBOUND_SECRET", "");
