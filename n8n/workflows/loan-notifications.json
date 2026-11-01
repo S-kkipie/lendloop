@@ -58,16 +58,39 @@
       }
     },
     {
-      "id": "42500b71-f819-5ed4-8814-68385bb9ba11",
-      "name": "Verify signature",
-      "type": "n8n-nodes-base.code",
+      "id": "8b7078aa-d503-52a3-ae6b-08ffc0764dc1",
+      "name": "Compute previous HMAC",
+      "type": "n8n-nodes-base.crypto",
       "typeVersion": 2,
       "position": [
         660,
         300
       ],
       "parameters": {
-        "jsCode": "// Constant-time compare of the expected HMAC (Crypto node) against every\n// provided v1= value, plus the 300-second window: the same rules and reasons\n// as convex/lib/hmac.ts. The event ID used for dedupe comes from the signed\n// body and must equal the (unsigned) header. The reason is never sent back.\nconst WINDOW_SECONDS = 300;\nconst { expected, provided, ts, raw, eventId } = $input.first().json;\n\nfunction constantTimeEqual(a, b) {\n  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;\n  let diff = 0;\n  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);\n  return diff === 0;\n}\n\nfunction check() {\n  const candidates = Array.isArray(provided) ? provided : [];\n  if (!/^\\d{10}$/.test(String(ts)) || candidates.length === 0) return { reason: 'missing' };\n  if (Math.abs(Date.now() / 1000 - Number(ts)) > WINDOW_SECONDS) return { reason: 'stale' };\n  let matched = false;\n  for (const candidate of candidates) {\n    if (constantTimeEqual(String(expected), candidate)) matched = true; // no early exit\n  }\n  if (!matched) return { reason: 'mismatch' };\n  let payload;\n  try {\n    payload = JSON.parse(raw);\n  } catch (error) {\n    return { reason: 'malformed' };\n  }\n  const isEvent =\n    payload !== null &&\n    typeof payload === 'object' &&\n    typeof payload.eventId === 'string' &&\n    payload.eventId.length > 0 &&\n    payload.eventId === eventId;\n  return isEvent ? { payload } : { reason: 'malformed' };\n}\n\nconst result = check();\nreturn [\n  {\n    json: result.payload\n      ? { valid: true, eventId: result.payload.eventId, payload: result.payload }\n      : { valid: false, reason: result.reason },\n  },\n];\n"
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.canonical }}",
+        "dataPropertyName": "expectedPrevious",
+        "encoding": "hex"
+      },
+      "credentials": {
+        "crypto": {
+          "id": "llCryptoInboundPrev",
+          "name": "LendLoop: Convex→n8n HMAC (previous)"
+        }
+      }
+    },
+    {
+      "id": "42500b71-f819-5ed4-8814-68385bb9ba11",
+      "name": "Verify signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Constant-time compare of the expected HMACs (current and previous secret,\n// one Crypto node each) against every provided v1= value, plus the 300-second\n// window: the same rules and reasons as convex/lib/hmac.ts. Accepting the\n// previous secret keeps deliveries flowing while a rotation is in progress\n// (without one, both nodes use the current secret). The event ID used for\n// dedupe comes from the signed body and must equal the (unsigned) header.\n// The reason is never sent back.\nconst WINDOW_SECONDS = 300;\nconst { expected, expectedPrevious, provided, ts, raw, eventId } = $input.first().json;\n\nfunction constantTimeEqual(a, b) {\n  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;\n  let diff = 0;\n  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);\n  return diff === 0;\n}\n\nfunction check() {\n  const candidates = Array.isArray(provided) ? provided : [];\n  if (!/^\\d{10}$/.test(String(ts)) || candidates.length === 0) return { reason: 'missing' };\n  if (Math.abs(Date.now() / 1000 - Number(ts)) > WINDOW_SECONDS) return { reason: 'stale' };\n  const secrets = [String(expected), String(expectedPrevious)];\n  let matched = false;\n  for (const candidate of candidates) {\n    for (const hmac of secrets) {\n      if (constantTimeEqual(hmac, candidate)) matched = true; // no early exit\n    }\n  }\n  if (!matched) return { reason: 'mismatch' };\n  let payload;\n  try {\n    payload = JSON.parse(raw);\n  } catch (error) {\n    return { reason: 'malformed' };\n  }\n  const isEvent =\n    payload !== null &&\n    typeof payload === 'object' &&\n    typeof payload.eventId === 'string' &&\n    payload.eventId.length > 0 &&\n    payload.eventId === eventId;\n  return isEvent ? { payload } : { reason: 'malformed' };\n}\n\nconst result = check();\nreturn [\n  {\n    json: result.payload\n      ? { valid: true, eventId: result.payload.eventId, payload: result.payload }\n      : { valid: false, reason: result.reason },\n  },\n];\n"
       }
     },
     {
@@ -76,7 +99,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        880,
+        1100,
         300
       ],
       "parameters": {
@@ -110,7 +133,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1100,
+        1320,
         500
       ],
       "parameters": {
@@ -127,7 +150,7 @@
       "type": "n8n-nodes-base.removeDuplicates",
       "typeVersion": 2,
       "position": [
-        1100,
+        1320,
         200
       ],
       "parameters": {
@@ -135,10 +158,13 @@
         "logic": "removeItemsWithAlreadySeenKeyValues",
         "dedupeValue": "={{ $json.eventId }}",
         "options": {
-          "scope": "workflow"
+          "scope": "workflow",
+          "historySize": 10000
         }
       },
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "notes": "historySize 10000 is a deliberate demo cap: once full, new notifications fail into the error workflow. Production moves dedupe into Convex (docs/production.md).",
+      "notesInFlow": true
     },
     {
       "id": "a254541e-754a-5bd9-bc74-cbf1041e2899",
@@ -146,7 +172,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1320,
+        1540,
         200
       ],
       "parameters": {
@@ -180,7 +206,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1540,
+        1760,
         400
       ],
       "parameters": {
@@ -197,7 +223,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1540,
+        1760,
         100
       ],
       "parameters": {
@@ -214,7 +240,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1760,
+        1980,
         100
       ],
       "parameters": {
@@ -227,7 +253,7 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        1980,
+        2200,
         100
       ],
       "parameters": {
@@ -257,7 +283,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2200,
+        2420,
         0
       ],
       "parameters": {
@@ -270,7 +296,7 @@
       "type": "n8n-nodes-base.crypto",
       "typeVersion": 2,
       "position": [
-        2420,
+        2640,
         0
       ],
       "parameters": {
@@ -293,7 +319,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2640,
+        2860,
         0
       ],
       "parameters": {
@@ -330,7 +356,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2200,
+        2420,
         260
       ],
       "parameters": {
@@ -343,7 +369,7 @@
       "type": "n8n-nodes-base.crypto",
       "typeVersion": 2,
       "position": [
-        2420,
+        2640,
         260
       ],
       "parameters": {
@@ -366,7 +392,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2640,
+        2860,
         260
       ],
       "parameters": {
@@ -422,6 +448,17 @@
       ]
     },
     "Compute HMAC": {
+      "main": [
+        [
+          {
+            "node": "Compute previous HMAC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute previous HMAC": {
       "main": [
         [
           {

@@ -122,3 +122,33 @@ test("the three webhook outcomes answer with the contract bodies and codes", () 
   );
   expect(responses).toEqual({ '{"error":"unauthorized"}': 401, '{"duplicate":true}': 200, '{"accepted":true}': 202 });
 });
+
+test("the webhook verifies against both the current and the previous Convex→n8n secret", () => {
+  const notify = parsed.find((w) => w.json.id === "llLoanNotify0001")!.json;
+  const feeds = (name: string) => notify.connections[name]?.main.flat().map((c) => c.node) ?? [];
+  const crypto = (name: string) => notify.nodes.find((n) => n.name === name)!;
+  expect(feeds("Build canonical string")).toEqual(["Compute HMAC"]);
+  expect(feeds("Compute HMAC")).toEqual(["Compute previous HMAC"]);
+  expect(feeds("Compute previous HMAC")).toEqual(["Verify signature"]);
+  expect(crypto("Compute HMAC").credentials?.crypto.id).toBe("llCryptoInbound01");
+  expect(crypto("Compute HMAC").parameters.dataPropertyName).toBe("expected");
+  expect(crypto("Compute previous HMAC").credentials?.crypto.id).toBe("llCryptoInboundPrev");
+  expect(crypto("Compute previous HMAC").parameters.dataPropertyName).toBe("expectedPrevious");
+});
+
+test("the entrypoint provisions every credential the workflows reference", () => {
+  const entrypoint = readFileSync(fileURLToPath(new URL("../../n8n/entrypoint.sh", import.meta.url)), "utf8");
+  const provisioned = new Set([...entrypoint.matchAll(/id: "([A-Za-z0-9]+)"/g)].map((m) => m[1]));
+  const referenced = new Set(
+    parsed.flatMap((w) => w.json.nodes.flatMap((n) => Object.values(n.credentials ?? {}).map((ref) => ref.id))),
+  );
+  expect([...referenced].sort()).toEqual([...provisioned].sort());
+  // The previous-secret credential falls back to the current secret when not rotating.
+  expect(entrypoint).toContain("env.LENDLOOP_N8N_WEBHOOK_SECRET_PREVIOUS || env.LENDLOOP_N8N_WEBHOOK_SECRET");
+});
+
+test("the dedupe history size is an explicit, documented decision", () => {
+  const notify = parsed.find((w) => w.json.id === "llLoanNotify0001")!.json;
+  const dedupe = notify.nodes.find((n) => n.type === "n8n-nodes-base.removeDuplicates")!;
+  expect(dedupe.parameters.options).toEqual({ scope: "workflow", historySize: 10000 });
+});

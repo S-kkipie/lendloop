@@ -68,10 +68,18 @@ const hmacHex = (secret: string, value: string) => createHmac("sha256", secret).
 const BUILD = codeOf("loan-notifications.json", "Build canonical string");
 const VERIFY = codeOf("loan-notifications.json", "Verify signature");
 
-// Webhook item -> Build canonical string -> Crypto (emulated) -> Verify signature.
-async function inbound(request: { headers: Record<string, string>; body?: string }, secret = SECRET) {
+// Webhook item -> Build canonical string -> Compute HMAC and Compute previous
+// HMAC (both Crypto nodes emulated) -> Verify signature. `secret` is n8n's
+// current secret; `previous` its previous one, which the entrypoint sets to the
+// current secret when no rotation is in progress.
+async function inbound(
+  request: { headers: Record<string, string>; body?: string },
+  secret = SECRET,
+  previous = secret,
+) {
   const [built] = await run(BUILD, { input: [{ json: { headers: request.headers } }], rawBody: request.body });
-  const withHmac = { ...built, expected: hmacHex(secret, String(built.canonical)) };
+  const canonical = String(built.canonical);
+  const withHmac = { ...built, expected: hmacHex(secret, canonical), expectedPrevious: hmacHex(previous, canonical) };
   const [verdict] = await run(VERIFY, { input: [{ json: withHmac }] });
   return { built, verdict };
 }
@@ -139,6 +147,36 @@ describe("loan-notifications: inbound verification", () => {
         body,
       });
       expect(verdict.valid).toBe(true);
+    });
+
+    describe("during a rotation (n8n holds a new current secret and the old one as previous)", () => {
+      const NEW_SECRET = "rotated-secret-0123456789abcdef0123456789abcdef";
+
+      test("an event Convex still signs with the previous secret is valid", async () => {
+        const { verdict } = await inbound({ headers: headers(), body }, NEW_SECRET, SECRET);
+        expect(verdict).toEqual({ valid: true, eventId, payload: JSON.parse(body) });
+      });
+
+      test("an event signed with the new current secret is valid", async () => {
+        signature = await sign(NEW_SECRET, ts, "POST", WEBHOOK_PATH, body);
+        const { verdict } = await inbound({ headers: headers(), body }, NEW_SECRET, SECRET);
+        expect(verdict.valid).toBe(true);
+      });
+
+      test("an event signed with neither secret is rejected", async () => {
+        const { verdict } = await inbound(
+          { headers: headers(), body },
+          NEW_SECRET,
+          "older-secret-0123456789abcdef0123456789abcdef",
+        );
+        expect(verdict).toEqual({ valid: false, reason: "mismatch" });
+      });
+
+      test("the previous secret still needs a fresh timestamp", async () => {
+        setNow(Number(ts) + SIGNATURE_WINDOW_SECONDS + 1);
+        const { verdict } = await inbound({ headers: headers(), body }, NEW_SECRET, SECRET);
+        expect(verdict).toEqual({ valid: false, reason: "stale" });
+      });
     });
 
     test("is valid exactly at the edge of the window", async () => {

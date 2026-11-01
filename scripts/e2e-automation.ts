@@ -180,6 +180,19 @@ async function main() {
     );
     const forged = await signedPost(JSON.stringify(payload), sent._id, "not-the-secret-0123456789abcdef01234567");
     record("forged signature is rejected", forged.status === 401, `HTTP ${forged.status} ${forged.text}`);
+    // After `pnpm setup:local --rotate`, n8n still accepts the previous secret
+    // (a 200 duplicate, not a 401), so events Convex signed before the switch land.
+    const previous = env.get("LENDLOOP_N8N_WEBHOOK_SECRET_PREVIOUS") ?? "";
+    if (previous && previous !== secret) {
+      const old = await signedPost(JSON.stringify(payload), sent._id, previous);
+      record(
+        "previous secret is still accepted (rotation)",
+        old.status === 200 && old.text === '{"duplicate":true}',
+        `HTTP ${old.status} ${old.text}`,
+      );
+    } else {
+      record("previous secret is still accepted (rotation)", true, "skipped: no rotation in progress");
+    }
   } else {
     record("repeated event ID is a duplicate", false, "skipped: no sent event");
   }
