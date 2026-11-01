@@ -57,7 +57,7 @@
 
 ### Task 7: Publish the repository
 
-- [ ] Final local checks: `pnpm test && pnpm typecheck && pnpm lint && pnpm build && pnpm docs:authz --check`; gitleaks over full history clean; `git grep -n "issacysofia"` returns nothing outside git metadata.
+- [ ] Final local checks: `pnpm test && pnpm typecheck && pnpm lint && pnpm build && pnpm docs:authz --check`; gitleaks over full history clean; `git grep` for the author's personal email returns nothing outside git metadata.
 - [ ] `gh repo create S-kkipie/lendloop --public --source . --remote origin --description "Neighbourhood tool-lending board: Next.js, Clerk, Convex and n8n with signed webhooks, RBAC and automated reminders."` then `git push -u origin main`. Confirm CI is green on GitHub.
 
 ### Task 8: Production deployment
