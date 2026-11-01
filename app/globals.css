@@ -369,40 +369,15 @@
 
 /* Line tabs that don't fit (five admin tabs on a 320 px phone) scroll inside
  * their own strip; the edge that hides more tabs fades out, so the strip reads
- * as scrollable. Scroll-driven, so it costs nothing: a strip that fits has an
- * inactive timeline and no fade at all. */
-@property --tabs-fade-start {
-  syntax: "<length>";
-  inherits: false;
-  initial-value: 0px;
+ * as scrollable. TabsList measures its overflow and sets data-scroll-edges. */
+[data-slot="tabs-list"][data-scroll-edges="end"] {
+  mask-image: linear-gradient(to right, black calc(100% - 2rem), transparent);
 }
-@property --tabs-fade-end {
-  syntax: "<length>";
-  inherits: false;
-  initial-value: 0px;
+[data-slot="tabs-list"][data-scroll-edges="start"] {
+  mask-image: linear-gradient(to left, black calc(100% - 2rem), transparent);
 }
-@supports (animation-timeline: scroll()) {
-  [data-slot="tabs-list"][data-variant="line"] {
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      black var(--tabs-fade-start),
-      black calc(100% - var(--tabs-fade-end)),
-      transparent
-    );
-    animation: tabs-scroll-fade linear both;
-    animation-timeline: scroll(self inline);
-  }
-}
-@keyframes tabs-scroll-fade {
-  from {
-    --tabs-fade-start: 0px;
-    --tabs-fade-end: 2rem;
-  }
-  to {
-    --tabs-fade-start: 2rem;
-    --tabs-fade-end: 0px;
-  }
+[data-slot="tabs-list"][data-scroll-edges="both"] {
+  mask-image: linear-gradient(to right, transparent, black 2rem, black calc(100% - 2rem), transparent);
 }
 
 @keyframes status-swap {

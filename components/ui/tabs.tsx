@@ -40,16 +40,56 @@ const tabsListVariants = cva(
   }
 )
 
+type ScrollEdges = "none" | "start" | "end" | "both"
+
+/**
+ * Which edges of a scrolling strip hide content. Measured (not a CSS scroll
+ * timeline: Chrome reports a strip with nothing to scroll as fully scrolled).
+ */
+function useScrollEdges(ref: React.RefObject<HTMLDivElement | null>): ScrollEdges {
+  const [edges, setEdges] = React.useState<ScrollEdges>("none")
+  React.useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const update = () => {
+      const max = el.scrollWidth - el.clientWidth
+      const start = el.scrollLeft > 1
+      const end = el.scrollLeft < max - 1
+      setEdges(max <= 1 ? "none" : start && end ? "both" : start ? "start" : "end")
+    }
+    update()
+    // Tabs change width when a count appears; the strip when the screen turns.
+    const observer = new ResizeObserver(update)
+    observer.observe(el)
+    for (const child of Array.from(el.children)) observer.observe(child)
+    el.addEventListener("scroll", update, { passive: true })
+    return () => {
+      observer.disconnect()
+      el.removeEventListener("scroll", update)
+    }
+  }, [ref])
+  return edges
+}
+
 function TabsList({
   className,
   variant = "line",
+  ref,
   ...props
 }: TabsPrimitive.List.Props & VariantProps<typeof tabsListVariants>) {
+  const localRef = React.useRef<HTMLDivElement>(null)
+  const edges = useScrollEdges(localRef)
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
       data-variant={variant}
+      data-scroll-edges={variant === "line" && edges !== "none" ? edges : undefined}
       className={cn(tabsListVariants({ variant }), className)}
+      ref={(node: HTMLDivElement | null) => {
+        localRef.current = node
+        if (typeof ref === "function") ref(node)
+        else if (ref) ref.current = node
+      }}
       {...props}
     />
   )

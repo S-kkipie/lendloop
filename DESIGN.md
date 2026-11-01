@@ -68,7 +68,8 @@ table above passes WCAG AA (checked with a script against the CSS file).
   Cancelled, Expired), `danger` (Overdue only). Text is always present.
 - Tabs: `line` (default; hairline rule, 2 px cobalt bar on the active tab) and
   `segmented`. A line strip that doesn't fit (320 px phones) scrolls inside
-  itself and fades the edge that hides more tabs (scroll-driven, CSS only). `TabsCount` renders the mono count chip ("Needs action 2").
+  itself and fades the edge that hides more tabs (`TabsList` measures its
+  overflow and sets `data-scroll-edges`). `TabsCount` renders the mono count chip ("Needs action 2").
 - Table: mono 11 px column heads on surface 2, hairline rows, hover tint. Frame
   it in a `rounded-xl border bg-card` container. On mobile, render stacked rows.
 - Fields: label above, helper or error below (`text-xs`, error in

@@ -37,7 +37,7 @@ export function AdminSection({
           <h2 id={id} className="text-base font-semibold tracking-title">
             {title}
           </h2>
-          {description ? <p className="max-w-[75ch] text-[0.8125rem] leading-5 text-muted-foreground">{description}</p> : null}
+          {description ? <p className="max-w-[60ch] text-[0.8125rem] leading-5 text-muted-foreground">{description}</p> : null}
         </div>
         {aside}
       </div>
