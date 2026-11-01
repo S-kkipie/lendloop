@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
+import { securityHeaders } from "./lib/securityHeaders";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
@@ -11,6 +11,20 @@ const nextConfig: NextConfig = {
         as: "*.css",
       },
     },
+  },
+  // CSP and the other security headers on every route (see lib/securityHeaders.ts).
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: securityHeaders({
+          convexUrl: process.env.NEXT_PUBLIC_CONVEX_URL,
+          clerkPublishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+          development: process.env.NODE_ENV === "development",
+          production: process.env.NODE_ENV === "production",
+        }),
+      },
+    ];
   },
 };
 
