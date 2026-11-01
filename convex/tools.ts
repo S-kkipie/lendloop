@@ -51,6 +51,8 @@ export const browse = userQuery({
       )
       .take(300);
     const needle = args.search?.trim().toLowerCase();
+    const viewer = { userId: ctx.user._id, isAdmin: ctx.role === "admin" };
+    const from = today();
     const rows = [];
     for (const tool of tools) {
       if (needle && !tool.name.toLowerCase().includes(needle)) continue;
@@ -63,7 +65,7 @@ export const browse = userQuery({
         condition: tool.condition,
         isMine: tool.ownerId === ctx.user._id,
         owner: await ownerSummary(ctx, tool),
-        availability: availabilityOf(active),
+        availability: availabilityOf(active, viewer, from),
       });
     }
     return rows;
@@ -93,7 +95,11 @@ export const get = userQuery({
       removalReason: isMine ? tool.removalReason : undefined,
       isMine,
       owner: await ownerSummary(ctx, tool),
-      availability: availabilityOf(await activeLoanFor(ctx, toolId)),
+      availability: availabilityOf(
+        await activeLoanFor(ctx, toolId),
+        { userId: ctx.user._id, isAdmin: ctx.role === "admin" },
+        from,
+      ),
       bookedRanges: booked,
     };
   },
@@ -121,7 +127,7 @@ export const mine = userQuery({
         status: tool.status,
         removalReason: tool.removalReason,
         pendingRequests: pending.length,
-        availability: availabilityOf(active),
+        availability: availabilityOf(active, { userId: ctx.user._id, isAdmin: false }, today()), // own tools: always dated
         canDelete: tool.status === "listed" && !active,
       });
     }

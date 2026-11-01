@@ -7,7 +7,8 @@ import { formatDay } from "@/lib/format";
 /**
  * "Available", or "Back Nov 12" while someone has it. Once the return date
  * has passed it just says "On loan": whether a neighbour is late is between
- * them and the owner, not something Browse announces.
+ * them and the owner, not something Browse announces (Convex leaves the date
+ * out for everyone else, so it may be missing).
  */
 export function AvailabilityBadge({ availability }: { availability: Availability }) {
   if (availability.state === "available") {
@@ -18,11 +19,11 @@ export function AvailabilityBadge({ availability }: { availability: Availability
       </Badge>
     );
   }
-  const late = availability.until < toDayString(new Date());
+  const until = availability.until;
   return (
     <Badge variant="warn">
       <ClockCountdownIcon aria-hidden="true" weight="bold" />
-      {late ? "On loan" : <>Back {formatDay(availability.until)}</>}
+      {until && until >= toDayString(new Date()) ? <>Back {formatDay(until)}</> : "On loan"}
     </Badge>
   );
 }

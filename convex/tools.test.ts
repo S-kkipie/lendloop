@@ -133,4 +133,46 @@ describe("get and browse", () => {
     expect(found).toHaveLength(1);
     expect(found[0].availability).toEqual({ state: "on_loan", until: "2026-11-07" });
   });
+
+  describe("an overdue loan's due date (spec §4: neighbours never learn someone is overdue)", () => {
+    // NOW is 2026-11-02; this loan was due back on 2026-10-30.
+    const overdue = { status: "active", startDate: "2026-10-25", endDate: "2026-10-30" } as const;
+
+    test("other neighbours see it on loan, without the date, in browse and get", async () => {
+      const t = setupTest();
+      const w = await seedWorld(t);
+      await insertLoan(t, w, overdue);
+      const [row] = await w.carol.as.query(api.tools.browse, { search: "drill" });
+      expect(row.availability).toEqual({ state: "on_loan" });
+      const tool = await w.carol.as.query(api.tools.get, { toolId: w.toolId });
+      expect(tool.availability).toEqual({ state: "on_loan" });
+      expect(JSON.stringify([row, tool])).not.toContain("2026-10-30");
+    });
+
+    test.each(["alice", "bob", "dana"] as const)("%s (owner, borrower, admin) still sees the date", async (who) => {
+      const t = setupTest();
+      const w = await seedWorld(t);
+      await insertLoan(t, w, overdue);
+      const [row] = await w[who].as.query(api.tools.browse, { search: "drill" });
+      expect(row.availability).toEqual({ state: "on_loan", until: "2026-10-30" });
+      const tool = await w[who].as.query(api.tools.get, { toolId: w.toolId });
+      expect(tool.availability).toEqual({ state: "on_loan", until: "2026-10-30" });
+    });
+
+    test("the owner's listings keep the date", async () => {
+      const t = setupTest();
+      const w = await seedWorld(t);
+      await insertLoan(t, w, overdue);
+      const [mine] = await w.alice.as.query(api.tools.mine, {});
+      expect(mine.availability).toEqual({ state: "on_loan", until: "2026-10-30" });
+    });
+
+    test("a loan due today is not overdue: everyone sees the date", async () => {
+      const t = setupTest();
+      const w = await seedWorld(t);
+      await insertLoan(t, w, { ...overdue, endDate: "2026-11-02" });
+      const tool = await w.carol.as.query(api.tools.get, { toolId: w.toolId });
+      expect(tool.availability).toEqual({ state: "on_loan", until: "2026-11-02" });
+    });
+  });
 });

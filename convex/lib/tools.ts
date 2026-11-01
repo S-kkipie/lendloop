@@ -6,7 +6,8 @@ import { appError } from "./errors";
 import { applyLoanTransition } from "./loanTransitions";
 import { LIMITS } from "./validators";
 
-export type Availability = { state: "available" } | { state: "on_loan"; until: string };
+/** `until` is missing only when the loan is overdue and the viewer is not a party to it. */
+export type Availability = { state: "available" } | { state: "on_loan"; until?: string };
 
 export async function activeLoanFor(ctx: QueryCtx, toolId: Id<"tools">): Promise<Doc<"loans"> | null> {
   return await ctx.db
@@ -27,8 +28,19 @@ export async function blockingLoans(ctx: QueryCtx, toolId: Id<"tools">): Promise
   return [...approved, ...active];
 }
 
-export function availabilityOf(active: Doc<"loans"> | null): Availability {
-  return active ? { state: "on_loan", until: active.endDate } : { state: "available" };
+/**
+ * Whether the tool is out, and until when. Past its end date only the owner,
+ * the borrower and admins get the date: other neighbours never learn that
+ * someone is overdue (spec §4), they just see the tool is on loan.
+ */
+export function availabilityOf(
+  active: Doc<"loans"> | null,
+  viewer: { userId: Id<"users">; isAdmin: boolean },
+  today: string,
+): Availability {
+  if (!active) return { state: "available" };
+  const isParty = viewer.isAdmin || viewer.userId === active.ownerId || viewer.userId === active.borrowerId;
+  return isParty || active.endDate >= today ? { state: "on_loan", until: active.endDate } : { state: "on_loan" };
 }
 
 export function cleanToolFields(input: { name: string; description: string }) {

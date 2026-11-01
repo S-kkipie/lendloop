@@ -85,7 +85,9 @@ function ListingRow({ tool }: { tool: Listing }) {
   const removed = tool.status === "removed";
   const blockedReason =
     !removed && !tool.canDelete && tool.availability.state === "on_loan"
-      ? `On loan until ${formatDay(tool.availability.until)}`
+      ? tool.availability.until
+        ? `On loan until ${formatDay(tool.availability.until)}`
+        : "On loan"
       : null;
 
   const removeButton = (

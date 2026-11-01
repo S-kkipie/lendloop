@@ -29,7 +29,11 @@ export function OwnerPanel({ toolId, toolName, availability }: OwnerPanelProps) 
   const pending = mine?.find((tool) => tool._id === toolId)?.pendingRequests ?? 0;
 
   const onLoan = availability.state === "on_loan";
-  const blockedReason = onLoan ? `On loan until ${formatDay(availability.until)}` : null;
+  const blockedReason = onLoan
+    ? availability.until
+      ? `On loan until ${formatDay(availability.until)}`
+      : "On loan"
+    : null;
 
   const removeButton = (
     <Button

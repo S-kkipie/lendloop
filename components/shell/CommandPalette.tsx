@@ -16,6 +16,7 @@ import {
   CommandList,
   CommandShortcut,
 } from "@/components/ui/command";
+import { toDayString } from "@/lib/calendarDays";
 import { categoryIcon, categoryLabel } from "@/lib/categories";
 import { formatDay } from "@/lib/format";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -119,8 +120,10 @@ function ToolResults({ search, onPick }: { search: string; onPick: (id: Id<"tool
             "Yours"
           ) : tool.availability.state === "available" ? (
             "Available"
-          ) : (
+          ) : tool.availability.until && tool.availability.until >= toDayString(new Date()) ? (
             <span className="font-mono">Back {formatDay(tool.availability.until)}</span>
+          ) : (
+            "On loan"
           )}
           {tool.owner.isTrustedLender && !tool.isMine ? (
             <SealCheckIcon weight="fill" aria-label="Trusted lender" className="text-primary-ink" />
