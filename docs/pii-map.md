@@ -37,7 +37,7 @@ Nobody, admins included, sees another user's full name or full email in the app.
 | Audit entry | `auditLog` | system | admins; parties for their loan | no | no | indefinitely, append-only | kept (IDs only; actor shows as "Former neighbour") |
 | Rate-limit state | rate limiter component | system | nobody | no | no | rolling window | keyed by user ID only |
 
-Demo data from `pnpm seed` is fictional (`marta@example.com` and so on) and those users cannot sign in.
+Demo data from `pnpm seed` is fictional and those users cannot sign in. Their addresses are Resend's sink mailbox (`delivered+marta@resend.dev` and so on), which accepts and discards mail, so demo notifications never bounce off the production sending domain.
 
 ## Other systems
 

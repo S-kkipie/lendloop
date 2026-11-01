@@ -137,7 +137,7 @@ Set for every route in `next.config.ts` `headers()`. Origins are built from env 
 
 ## n8n hardening
 
-Set in `docker-compose.yml` locally and as Railway variables in production (the image does not set them, so each must be present in the deployment):
+Baked into `n8n/Dockerfile` as `ENV` defaults, so the local stack and Railway run with the same settings without repeating them. Compose overrides only `N8N_SECURE_COOKIE` (plain HTTP locally):
 
 | Variable | Value | Why |
 |---|---|---|
@@ -148,7 +148,7 @@ Set in `docker-compose.yml` locally and as Railway variables in production (the 
 | `N8N_DIAGNOSTICS_ENABLED`, `N8N_PERSONALIZATION_ENABLED`, `N8N_VERSION_NOTIFICATIONS_ENABLED`, `N8N_TEMPLATES_ENABLED` | `false` | No outbound telemetry or template calls |
 | `N8N_PUBLIC_API_DISABLED` | `true` | No REST API surface |
 | `N8N_INSTANCE_OWNER_MANAGED_BY_ENV` | `true` | Owner provisioned from env; never claimable |
-| `N8N_SECURE_COOKIE` | `false` locally (plain HTTP), `true` in production | Session cookie only over HTTPS |
+| `N8N_SECURE_COOKIE` | `true` (compose sets `false` for local plain HTTP) | Session cookie only over HTTPS |
 
 Also: the image is pinned (`n8nio/n8n:2.45.7`), Postgres is the backend, and on every start the entrypoint re-imports the shipped workflows and credentials, publishes them, and unpublishes any workflow that is no longer shipped, so a stale or hand-made workflow cannot stay active.
 

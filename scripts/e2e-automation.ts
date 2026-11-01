@@ -211,7 +211,7 @@ async function main() {
     reminders24h: { sent: number };
     heartbeat: { stale: boolean };
   };
-  const demoReminder = (await mailTo("joaquin@example.com", "Reminder: please return")).length;
+  const demoReminder = (await mailTo("delivered+joaquin@resend.dev", "Reminder: please return")).length;
   record(
     "overdue reminder sent and recorded",
     Boolean(reminder) && Boolean(reminderRow) && health2.reminders24h.sent >= 1 && !health2.heartbeat.stale,

@@ -63,7 +63,10 @@ export async function seedDemo(ctx: MutationCtx): Promise<{ created: boolean }> 
       tokenIdentifier: `seed|${id}`,
       clerkId: `seed_${id}`,
       name,
-      email: `${id}@example.com`,
+      // Resend's sink address: a deliverable mailbox that accepts and discards mail,
+      // so demo notifications to fictional neighbours never bounce off the real
+      // sending domain. Mailpit catches it locally like any other address.
+      email: `delivered+${id}@resend.dev`,
       isTrustedLender: false,
     });
     await audit(ctx, { ...SEED, entityType: "user", entityId: userId });

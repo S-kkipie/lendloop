@@ -289,7 +289,7 @@ Secrets are never committed: `.env.local` and `n8n/.env` are gitignored, and `n8
 | `MAILPIT_UI_PORT` | no | Local only: host port for the Mailpit UI |
 | `WEBHOOK_URL` | no | Production only: n8n's public base URL |
 | `N8N_SECURE_COOKIE` | no | `false` locally (plain HTTP), `true` in production |
-| Hardening: `N8N_BLOCK_ENV_ACCESS_IN_NODE`, `EXECUTIONS_DATA_*`, `N8N_DIAGNOSTICS_ENABLED`, … | no | Set in `docker-compose.yml`; must be set as Railway variables too. List and reasons in [security.md](docs/security.md#n8n-hardening) |
+| Hardening: `N8N_BLOCK_ENV_ACCESS_IN_NODE`, `EXECUTIONS_DATA_*`, `N8N_DIAGNOSTICS_ENABLED`, … | no | Baked into `n8n/Dockerfile`, so local and Railway share them. List and reasons in [security.md](docs/security.md#n8n-hardening) |
 
 ## Testing
 
