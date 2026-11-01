@@ -8,7 +8,7 @@ Related: [security known limitations](security.md#known-limitations), [runbook](
 
 | | |
 |---|---|
-| App | <https://lendloop-steel.vercel.app> |
+| App | <https://lendloop.aido.lat> (Vercel; `lendloop-steel.vercel.app` still answers as an alias) |
 | Convex health | <https://ideal-oriole-101.convex.site/health> |
 | n8n | <https://n8n-production-4cde.up.railway.app> (webhook only; the editor login is private) |
 | Email | Resend email API (HTTPS), sending domain `lendloop.aido.lat`, from `LendLoop <no-reply@lendloop.aido.lat>` |
@@ -49,7 +49,7 @@ Production secrets are generated for production only (none are shared with the l
 
 ## Clerk production instance
 
-- Create a production instance on an owned app domain (Clerk requires DNS records for its Frontend API, account portal and email sending under that domain). The demo stays on a development instance because it has no owned app domain; the Vercel URL is not enough.
+- Create a production instance on an owned app domain (Clerk requires DNS records for its Frontend API, account portal and email sending under that domain). The demo has an owned domain (`lendloop.aido.lat`) but stays on a development instance: a production instance also needs those DNS records, its own Google OAuth credentials and re-created users, which is not worth it for a reviewer demo.
 - Recreate the setup there: the Convex integration, the session-token claims (`aud`, `role`, `email`, `name`), the webhook endpoint for `user.updated` and `user.deleted`. Update `CLERK_JWT_ISSUER_DOMAIN`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` (`pk_live_…`), `CLERK_SECRET_KEY` (`sk_live_…`) and `CLERK_WEBHOOK_SIGNING_SECRET`.
 - Turn on what a clinician-facing product would expect: MFA (required for admins), bot protection on sign-up, session lifetime suited to shared devices.
 - Admin grants stay in `publicMetadata`, but go through a small audited admin flow instead of the Clerk dashboard.

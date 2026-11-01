@@ -10,7 +10,7 @@ LendLoop is a tool-lending board for a neighbourhood. Neighbours list tools they
 | ![Tool detail with booking calendar](docs/screenshots/tool-detail.png) | ![Incoming requests with an overlap warning](docs/screenshots/incoming.png) |
 | ![Loan timeline with automation entries](docs/screenshots/timeline.png) | ![Admin console, automation tab](docs/screenshots/admin-automation.png) |
 
-**Live demo:** <https://lendloop-steel.vercel.app>. Test accounts (an admin and a regular neighbour): credentials are in the submission email. Details in [docs/production.md](docs/production.md#live-demo).
+**Live demo:** <https://lendloop.aido.lat>. Test accounts (an admin and a regular neighbour): credentials are in the submission email. Details in [docs/production.md](docs/production.md#live-demo).
 
 ## Contents
 
@@ -307,7 +307,7 @@ Secrets are never committed: `.env.local` and `n8n/.env` are gitignored, and `n8
 
 ## Production
 
-The demo runs on Vercel, a Convex production deployment, Railway (n8n and Postgres, same image as local) and the Resend email API with the sending domain `lendloop.aido.lat`. Clerk stays a development instance, because a production instance needs an owned app domain.
+The demo runs on Vercel at `lendloop.aido.lat`, a Convex production deployment, Railway (n8n and Postgres, same image as local) and the Resend email API sending from `no-reply@lendloop.aido.lat`. Clerk stays a development instance; moving to a production instance is the first item in the production note.
 
 Before real users I would add, in order: a Clerk production instance; a secret manager with scheduled rotation; dedupe moved from n8n into Convex (n8n's history is capped at 10,000 event IDs); paging on dead letters, a stale heartbeat and `/health` (log drain, Sentry, uptime monitors); n8n queue mode with workers, backups and a private editor; a nonce-based CSP; retention and purge jobs; data export and erasure; tuned rate limits; an external penetration test; and neighbourhood tenancy. Reasoning and specifics: [docs/production.md](docs/production.md).
 

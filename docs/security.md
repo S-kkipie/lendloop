@@ -160,7 +160,7 @@ Also: the image is pinned (`n8nio/n8n:2.45.7`), Postgres is the backend, and on 
 
 These are true of the code today. Fixes for the ones that matter in production are in [production.md](production.md).
 
-1. **Clerk is a development instance** in the demo (dev keys, Clerk's development banner and limits). A production instance needs an owned app domain.
+1. **Clerk is a development instance** in the demo (dev keys, Clerk's development banner and limits). Moving to a production instance (DNS records under `lendloop.aido.lat`, own OAuth credentials) is the first item in [production.md](production.md#clerk-production-instance).
 2. **CSP allows `'unsafe-inline'` scripts and styles.** A nonce-based policy needs dynamic rendering of every page.
 3. **Inbound rate-limit buckets are global.** The HMAC is verified first, so unsigned floods get a 401 without touching the bucket (`convex/http.test.ts` proves 300 unsigned requests do not block a signed one), but there is no per-IP limit in front of Convex; edge rate limiting is a production item.
 4. **The n8n editor is reachable on the same public domain as the webhook** in the demo. It is protected by the env-provisioned owner account with a generated password; MFA is not enforced.
