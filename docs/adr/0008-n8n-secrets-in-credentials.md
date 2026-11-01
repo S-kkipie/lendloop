@@ -10,9 +10,9 @@ The quick way to give a workflow a secret is `$env.SECRET`. But the n8n process 
 ## Decision
 
 - `N8N_BLOCK_ENV_ACCESS_IN_NODE=true`: `$env` throws inside workflows.
-- Secrets live in n8n credentials with fixed IDs: two Crypto credentials for the Convex → n8n secret (current and previous), one for n8n → Convex, one SMTP credential. `entrypoint.sh` creates them from env on every start through a temporary 0600 file that it deletes, and n8n encrypts them at rest.
+- Secrets live in n8n credentials with fixed IDs: two Crypto credentials for the Convex → n8n secret (current and previous), one for n8n → Convex, one Header Auth credential, "LendLoop Mail API", for the mail API key. `entrypoint.sh` creates them from env on every start through a temporary 0600 file that it deletes, and n8n encrypts them at rest.
 - HMACs are computed by Crypto nodes; Code nodes only build canonical strings and compare, with no `crypto` builtin.
-- Non-secret config is rendered into the workflow JSON at start from three allowlisted placeholders: `{{CONVEX_SITE_URL}}`, `{{MAIL_FROM}}`, `{{OPS_EMAIL}}`.
+- Non-secret config is rendered into the workflow JSON at start from four allowlisted placeholders: `{{CONVEX_SITE_URL}}`, `{{MAIL_API_URL}}`, `{{MAIL_FROM}}`, `{{OPS_EMAIL}}`.
 
 ## Consequences
 

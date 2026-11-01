@@ -27,7 +27,7 @@ flowchart LR
         N8N["n8n, own image<br/>loan-notifications<br/>overdue-reminders<br/>error-handler"]
         PG[("Postgres<br/>n8n state")]
     end
-    SMTP["SMTP<br/>Mailpit locally, Resend in production"]
+    MAIL["Mail API<br/>local mail API and Mailpit locally,<br/>Resend API in production"]
 
     UI -- HTTPS --> NX
     UI -- sign in --> CK
@@ -40,7 +40,7 @@ flowchart LR
     HTTP --> DB
     CK -- "Svix-signed webhook" --> HTTP
     N8N --> PG
-    N8N -- SMTP --> SMTP
+    N8N -- "HTTPS, Idempotency-Key" --> MAIL
 ```
 
 | Component | Responsibility | Code |
@@ -54,14 +54,14 @@ flowchart LR
 | Crons | Hourly loan expiry (minute 5) and heartbeat check (minute 15). | `convex/crons.ts` |
 | n8n | Three workflows exported to git, imported and published by the image's entrypoint on every start. Secrets live in n8n credentials. | `n8n/Dockerfile`, `n8n/entrypoint.sh`, `n8n/workflows/` |
 | Postgres | n8n's database: credentials (encrypted), workflows, error executions (7 days), dedupe history. | `docker-compose.yml` locally; Railway plugin in production |
-| SMTP | Mailpit locally (web UI on port 8025); Resend SMTP with the sending domain `lendloop.aido.lat` in production. | `n8n/.env` |
+| Mail API | `POST /emails` in Resend's request format. Locally a small relay (`mail-api`) forwards each message to Mailpit (web UI on port 8025); in production it is Resend's API with the sending domain `lendloop.aido.lat`. | `n8n/local-mail-api.ts`, `n8n/.env` |
 
 ### Runtime topology
 
 | | Next.js | Convex | n8n | Mail |
 |---|---|---|---|---|
-| Local | `pnpm dev`, port 3000 | local deployment (`convex dev`), API 3210, HTTP actions 3211 | `pnpm stack:up` (Docker Compose), port 5678 | Mailpit, UI 8025, SMTP 1025 inside the compose network |
-| Demo | Vercel | Convex production deployment | Railway, same image, Railway Postgres | Resend SMTP |
+| Local | `pnpm dev`, port 3000 | local deployment (`convex dev`), API 3210, HTTP actions 3211 | `pnpm stack:up` (Docker Compose), port 5678 | `mail-api` and Mailpit; Mailpit UI 8025, SMTP 1025 only inside the compose network |
+| Demo | Vercel | Convex production deployment | Railway, same image, Railway Postgres | Resend API |
 
 Locally, Convex reaches n8n at `http://localhost:5678` and n8n (in Docker) reaches Convex at `http://host.docker.internal:3211` (`extra_hosts: host-gateway`). A cloud Convex deployment cannot reach `localhost`, which is why local development uses a Convex local deployment ([ADR 0001](adr/0001-deployment-topology.md)).
 
@@ -75,7 +75,7 @@ Locally, Convex reaches n8n at `http://localhost:5678` and n8n (in Docker) reach
 | Clerk → Convex `/clerk/webhook` | Svix signature (`CLERK_WEBHOOK_SIGNING_SECRET`) | event type allowlist (`user.updated`, `user.deleted`) | Rate limited |
 | Convex → n8n | HMAC with `N8N_WEBHOOK_SECRET`, 300 s window, method and path bound | n8n accepts only the one webhook path | Payload built at send time, allowlisted fields |
 | n8n → Convex `/n8n/*` | HMAC with `CONVEX_INBOUND_SECRET` (separate secret), same rules | each endpoint does one narrow thing and re-validates its input | Rate limited, 64 KB cap |
-| n8n → SMTP | SMTP credential in n8n | provider | TLS (port 465) in production |
+| n8n → mail API | Bearer key in the n8n credential "LendLoop Mail API" | provider | HTTPS in production; plain HTTP inside the compose network locally |
 | Uptime monitor → `/health` | none | none | Returns `{"ok":true}` and nothing else |
 | Vercel build → Convex | `CONVEX_DEPLOY_KEY` | deploy only | Build-time secret |
 
@@ -84,7 +84,7 @@ Locally, Convex reaches n8n at `http://localhost:5678` and n8n (in Docker) reach
 1. A signed-in borrower picks dates on a tool and submits. The browser calls the `loans.request` mutation over the Convex WebSocket with the Clerk JWT.
 2. `userMutation` verifies the token, loads the caller's `users` row and role. The handler validates the range (`convex/model/dates.ts`) and message, enforces the rate limit (10 per hour per user), checks overlap with approved or active loans and for an existing pending request, inserts the loan, writes an audit entry and enqueues a `loan.requested` event for the owner. All of this is one transaction.
 3. The scheduler runs `deliver`, which claims the event, builds the payload from current data (owner's email and first name, borrower's first name, tool name, dates, link), signs it and POSTs it to n8n.
-4. n8n verifies the signature, deduplicates by event ID, answers 202, composes a plain-text email and sends it over SMTP.
+4. n8n verifies the signature, deduplicates by event ID, answers 202, composes a plain-text email and sends it with an HTTPS request to the mail API, with an `Idempotency-Key` header derived from the event ID.
 5. n8n posts a signed write-back; Convex marks the event `sent`. The loan timeline shows "Email sent" instead of "Queued".
 6. The owner approves. `applyLoanTransition` (the only way a loan changes status) patches the loan, audits, enqueues `loan.approved`, and in the same transaction auto-declines overlapping pending requests, each with its own audit entry and `loan.declined` event.
 
@@ -124,7 +124,7 @@ sequenceDiagram
     actor U as Neighbour
     participant C as Convex
     participant N as n8n loan-notifications
-    participant M as SMTP
+    participant M as Mail API
     U->>C: mutation, for example loans.approve
     Note over C: one transaction: patch loan, audit entry,<br/>outbox event with IDs only, schedule deliver
     C->>C: deliver: claim (lease), build payload now
@@ -160,7 +160,7 @@ sequenceDiagram
     participant S as n8n schedule, daily 09:00
     participant N as n8n overdue-reminders
     participant C as Convex
-    participant M as SMTP
+    participant M as Mail API
     S->>N: trigger in GENERIC_TIMEZONE
     N->>C: GET /n8n/overdue-loans, signed, empty body
     Note over C: record heartbeat check-in
@@ -182,7 +182,7 @@ sequenceDiagram
 The full failure-mode table, with the test or E2E step that proves each row, is in [integration.md](integration.md#failure-modes). In short:
 
 - **Convex → n8n** never loses an event silently: it is retried with backoff, then marked `dead` and shown in the admin console with a replay button.
-- **n8n → SMTP** failures come back to Convex with the event ID, so the event is `failed` and replayable.
+- **n8n → mail API** failures come back to Convex with the event ID, so the event is `failed` and replayable.
 - **n8n → Convex** failures go to the error workflow, which reports to Convex or, if Convex is unreachable, emails `OPS_EMAIL`.
 - **A schedule that never runs** is caught by the Convex heartbeat check, because nothing else can report it.
 
@@ -202,11 +202,11 @@ convex/
   tools.ts loans.ts users.ts admin.ts
   http.ts clerkWebhook.ts crons.ts seed.ts devtools.ts
 contracts/            hmac-vectors.json, shared by Convex and n8n tests
-n8n/                  Dockerfile, entrypoint.sh, workflows/*.json, .env.example
+n8n/                  Dockerfile, entrypoint.sh, local-mail-api.ts, workflows/*.json, .env.example
 scripts/              setup.ts (secrets and env wiring), e2e-automation.ts, authz-matrix.ts
 tests/                authz matrix, n8n workflow lint and contract tests, static checks
 e2e/                  Playwright specs (pnpm e2e, local only)
 docs/                 this documentation; superpowers/ holds the design spec and plans
 design/               directions.html, the UI direction comparison
-docker-compose.yml    local n8n, Postgres and Mailpit
+docker-compose.yml    local n8n, Postgres, mail API and Mailpit
 ```

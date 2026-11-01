@@ -52,7 +52,7 @@ flowchart LR
     CX -- "HMAC-signed POST" --> N8N["n8n on Railway<br/>3 workflows"]
     N8N -- "HMAC-signed GET/POST<br/>(separate secret)" --> CX
     N8N --> PG[("Postgres")]
-    N8N -- SMTP --> MAIL["Mailpit locally<br/>Resend in production"]
+    N8N -- "HTTPS, Idempotency-Key" --> MAIL["Local mail API, then Mailpit<br/>Resend API in production"]
 ```
 
 ## How automation works
@@ -66,7 +66,7 @@ sequenceDiagram
     autonumber
     participant C as Convex
     participant N as n8n
-    participant M as SMTP
+    participant M as Mail API
     Note over C: loan change + outbox event,<br/>one transaction
     C->>N: signed POST, event ID
     alt bad signature
@@ -93,7 +93,7 @@ sequenceDiagram
     autonumber
     participant N as n8n
     participant C as Convex
-    participant M as SMTP
+    participant M as Mail API
     N->>C: signed GET /n8n/overdue-loans
     Note over C: heartbeat check-in
     C-->>N: overdue loans not yet reminded today
@@ -120,7 +120,7 @@ Read more: [security and threat model](docs/security.md), [PII map](docs/pii-map
 
 ## Quickstart
 
-Runs everything locally: Next.js and a Convex local deployment on your machine, n8n, Postgres and Mailpit in Docker.
+Runs everything locally: Next.js and a Convex local deployment on your machine, n8n, Postgres, a local mail API and Mailpit in Docker.
 
 ### Prerequisites
 
@@ -177,10 +177,10 @@ In the second terminal:
 
 ```sh
 pnpm setup:local   # generates secrets into n8n/.env (mode 0600) and sets the Convex env vars
-pnpm stack:up      # builds the n8n image; starts n8n, Postgres and Mailpit
+pnpm stack:up      # builds the n8n image; starts n8n, Postgres, the local mail API and Mailpit
 ```
 
-`setup:local` prints key names, never values. It sets `N8N_WEBHOOK_URL`, `N8N_WEBHOOK_SECRET`, `CONVEX_INBOUND_SECRET`, `APP_URL` and `APP_TIMEZONE` on the Convex deployment. n8n starts with its three workflows imported, credentials created and everything active; no clicks needed.
+`setup:local` prints key names, never values. It sets `N8N_WEBHOOK_URL`, `N8N_WEBHOOK_SECRET`, `CONVEX_INBOUND_SECRET`, `APP_URL` and `APP_TIMEZONE` on the Convex deployment. n8n starts with its three workflows imported, credentials created and everything active; no clicks needed. It also generates `MAIL_API_KEY` and removes the obsolete `SMTP_*` keys from an existing `n8n/.env`.
 
 - n8n editor: <http://localhost:5678>, owner `owner@lendloop.local`, password in `n8n/.env` (`N8N_OWNER_PASSWORD`).
 - Mailpit (all local email): <http://localhost:8025>.
@@ -212,7 +212,7 @@ The Admin item appears once the session token refreshes (within a minute; reload
 pnpm e2e:automation
 ```
 
-Prints a PASS/FAIL table against the running stack: email on request, write-back marks it sent, a repeated event ID is a duplicate, a forged signature gets 401, an overdue reminder is sent and recorded once per day, an SMTP failure (Mailpit chaos) reaches Convex as `failed`, and an admin replay delivers. It removes everything it created.
+Prints a PASS/FAIL table against the running stack: email on request, write-back marks it sent, a repeated event ID is a duplicate, a forged signature gets 401, an overdue reminder is sent and recorded once per day, a mail failure (Mailpit chaos) reaches Convex as `failed`, and an admin replay delivers. It removes everything it created.
 
 Reset the demo data at any time with `pnpm db:reset-demo`. Stop the stack with `pnpm stack:down`.
 
@@ -228,7 +228,7 @@ Reset the demo data at any time with `pnpm db:reset-demo`. Stop the stack with `
 | `pnpm test` / `pnpm test:watch` | Vitest: unit, `convex-test`, workflow lint and contract, static checks |
 | `pnpm docs:authz` | Regenerate `docs/authz-matrix.md`; `pnpm docs:authz --check` fails if it is stale |
 | `pnpm setup:local` | Generate local secrets into `n8n/.env` and set Convex env vars; `--rotate` rotates both HMAC secrets |
-| `pnpm stack:up` / `pnpm stack:down` | Start or stop n8n, Postgres and Mailpit |
+| `pnpm stack:up` / `pnpm stack:down` | Start or stop n8n, Postgres, the local mail API and Mailpit |
 | `pnpm seed` | Idempotent fictional demo data (`seed:demo`) |
 | `pnpm db:reset-demo` | Empty all app tables and re-seed (needs `ALLOW_DEV_TOOLS=true`) |
 | `pnpm e2e:automation` | Automation E2E against the local stack |
@@ -284,8 +284,8 @@ Secrets are never committed: `.env.local` and `n8n/.env` are gitignored, and `n8
 | `CONVEX_SITE_URL` | no | Convex HTTP actions URL as seen from n8n (`http://host.docker.internal:3211` locally, `https://<deployment>.convex.site` in production) |
 | `MAIL_FROM` | no | Sender, for example `LendLoop <no-reply@lendloop.aido.lat>` |
 | `OPS_EMAIL` | no | Receives the last-resort alert when Convex is unreachable |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_SECURE` | no | SMTP credential (`mailpit:1025` locally; `smtp.resend.com:465`, user `resend`, secure `true` in production) |
-| `SMTP_PASS` | **yes** | SMTP password (a sending-only Resend API key in production) |
+| `MAIL_API_URL` | no | Base URL of the mail API that n8n POSTs `/emails` to (`http://mail-api:8080` locally, `https://api.resend.com` in production) |
+| `MAIL_API_KEY` | **yes** | Bearer key for the mail API (random hex generated by `setup:local` locally; a sending-only Resend API key restricted to `lendloop.aido.lat` in production) |
 | `MAILPIT_UI_PORT` | no | Local only: host port for the Mailpit UI |
 | `WEBHOOK_URL` | no | Production only: n8n's public base URL |
 | `N8N_SECURE_COOKIE` | no | `false` locally (plain HTTP), `true` in production |
@@ -309,7 +309,7 @@ Secrets are never committed: `.env.local` and `n8n/.env` are gitignored, and `n8
 
 ## Production
 
-The demo runs on Vercel, a Convex production deployment, Railway (n8n and Postgres, same image as local) and Resend SMTP with the sending domain `lendloop.aido.lat`. Clerk stays a development instance, because a production instance needs an owned app domain.
+The demo runs on Vercel, a Convex production deployment, Railway (n8n and Postgres, same image as local) and the Resend email API with the sending domain `lendloop.aido.lat`. Clerk stays a development instance, because a production instance needs an owned app domain.
 
 Before real users I would add, in order: a Clerk production instance; a secret manager with scheduled rotation; dedupe moved from n8n into Convex (n8n's history is capped at 10,000 event IDs); paging on dead letters, a stale heartbeat and `/health` (log drain, Sentry, uptime monitors); n8n queue mode with workers, backups and a private editor; a nonce-based CSP; retention and purge jobs; data export and erasure; tuned rate limits; an external penetration test; and neighbourhood tenancy. Reasoning and specifics: [docs/production.md](docs/production.md).
 
@@ -322,7 +322,7 @@ lib/                 UI helpers with tests
 convex/              schema, functions (tools, loans, users, admin), lib/ (authz wrappers, HMAC,
                      logger, audit), model/ (pure rules), automation/ (outbox, delivery, contract,
                      inbound endpoints), http.ts, crons.ts, seed.ts, devtools.ts
-n8n/                 Dockerfile, entrypoint.sh, workflows/*.json, .env.example
+n8n/                 Dockerfile, entrypoint.sh, local-mail-api.ts, workflows/*.json, .env.example
 contracts/           HMAC test vectors shared by Convex and n8n tests
 scripts/             setup.ts, e2e-automation.ts, authz-matrix.ts
 tests/               authz matrix, n8n workflow lint and contract tests, static checks
@@ -330,7 +330,7 @@ e2e/                 Playwright specs
 docs/                documentation (below); superpowers/ holds the design spec and plans
 design/              UI direction comparison (directions.html)
 DESIGN.md            locked design system
-docker-compose.yml   local n8n, Postgres, Mailpit
+docker-compose.yml   local n8n, Postgres, mail API, Mailpit
 ```
 
 ## Documentation
@@ -344,7 +344,7 @@ docker-compose.yml   local n8n, Postgres, Mailpit
 | [docs/authz-matrix.md](docs/authz-matrix.md) | Generated authorization matrix |
 | [docs/runbook.md](docs/runbook.md) | Rotate secrets, replay dead letters, stale heartbeat, n8n down, 401s, bounces, reset the demo |
 | [docs/production.md](docs/production.md) | What I would change for production, live demo details |
-| [docs/adr/](docs/adr/) | Ten short decision records (deployment, roles, lifecycle, email, outbox, signing, data minimization, n8n secrets, user sync, UI direction) |
+| [docs/adr/](docs/adr/) | Eleven short decision records (deployment, roles, lifecycle, email, outbox, signing, data minimization, n8n secrets, user sync, UI direction, email through the Resend API) |
 | [DESIGN.md](DESIGN.md) | Design system tokens and rules |
 
 ### How this was built

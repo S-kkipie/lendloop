@@ -244,27 +244,34 @@ stateDiagram-v2
 
 **Dead letters.** `dead` and `failed` events show in the admin console (Automation tab) with their sanitized `lastError`, and are logged as `outbox.dead`. They stay until an admin replays them. Nobody is paged; see [production](production.md#observability).
 
-Inside n8n, network and email nodes have Retry On Fail:
+Inside n8n, network nodes (including the three that send email through the mail API) have Retry On Fail:
 
 | Node | Tries | Wait | When exhausted |
 |---|---|---|---|
-| `Send email` (loan-notifications) | 5 | 5 s | error output → signed failure report with the event ID → event `failed` |
-| `Send reminder` (overdue-reminders) | 5 | 5 s | error output → reminder recorded `failed` |
+| `Send email` (loan-notifications), HTTP request to the mail API | 5 | 5 s | error output → signed failure report with the event ID → event `failed` |
+| `Send reminder` (overdue-reminders), HTTP request to the mail API | 5 | 5 s | error output → reminder recorded `failed` |
 | HTTP requests to Convex (write-backs, overdue GET, error report) | 3 | 2 s | execution fails → error workflow |
-| `Email ops` (error-handler) | 5 | 5 s | nothing further |
+| `Email ops` (error-handler), HTTP request to the mail API | 5 | 5 s | nothing further |
 
-`tests/n8n/workflows.test.ts` fails if any HTTP or email node loses its retry settings, or if a main workflow stops routing to the error handler.
+The failure report and the `Mark failed` write-back include the mail API's response body (for example `SMTP 451 …` locally, or Resend's error) with email addresses replaced by `[email]`.
+
+`tests/n8n/workflows.test.ts` fails if any HTTP node loses its retry settings, or if a main workflow stops routing to the error handler.
 
 ## Idempotency
 
 | What | Key | Where enforced | Effect of a repeat |
 |---|---|---|---|
 | Notification event | outbox event ID | n8n Remove Duplicates (workflow scope, kept in n8n's Postgres, `historySize` 10,000) | `200 {"duplicate":true}`, no second email |
+| Email send (notification) | `Idempotency-Key: lendloop-<eventId>` | mail API (Resend; the local mail API implements the same rules) | same key and payload within 24 h returns the original response, no second email; same key with a different payload is `409` |
+| Email send (reminder) | `Idempotency-Key: lendloop-reminder-<loanId>:<YYYY-MM-DD>` | mail API | as above |
+| Email send (ops alert) | `Idempotency-Key: lendloop-ops-<failed executionId>` | mail API | as above |
 | Reminder | `<loanId>:<YYYY-MM-DD>`, today in `APP_TIMEZONE` | `recordReminder` (unique by key); the overdue GET skips loans with a `sent` reminder today | no duplicate row; only `failed → sent` upgrades are allowed |
 | Notification status | event ID + status | `recordNotificationStatus` | already `sent` (or `skipped`) is a no-op |
 | Automation error | n8n execution ID | `recordError` (unique by `executionId`) | `{"duplicate":true}` |
 | Clerk webhook | Clerk user ID | upsert and anonymize are naturally idempotent; `user.updated` is ignored for deleted users | no change |
 | Admin replay | none, on purpose | each replay is a new event ID | a second replay sends a second email |
+
+The email keys matter for n8n's 5 retries: if an attempt went through but its response was lost, the retry cannot send the email twice.
 
 The dedupe history cap is a known limitation for the demo; the production fix is in [production.md](production.md#move-dedupe-into-convex).
 
@@ -303,7 +310,7 @@ Each row was exercised by a test or by `pnpm e2e:automation` against the local s
 | n8n down or slow | non-2xx or 10 s timeout on delivery | `retrying` with backoff, `dead` after 5 attempts; admin replays | `convex/automation/delivery.test.ts` "retries with backoff on 503, then gives up after 5 attempts", "network errors are retried and can recover" |
 | Convex→n8n secret wrong | n8n answers 401 | `dead` at once (no retry storm); `lastError` "n8n responded 401" | `delivery.test.ts` "a 401 … goes straight to dead"; e2e "forged signature is rejected" |
 | Convex not configured | `N8N_WEBHOOK_URL` or secret missing | `dead` without calling n8n | `delivery.test.ts` "missing configuration marks the event dead without calling n8n" |
-| SMTP rejects or is down | `Send email` retries exhausted | failure report with event ID → event `failed`; replay available | e2e "SMTP failure reaches Convex" (Mailpit chaos, 451 on every recipient) |
+| Mail API rejects or is down | `Send email` retries exhausted (non-2xx) | failure report with event ID → event `failed`; replay available | e2e "mail failure reaches Convex" (Mailpit chaos rejects every recipient with 451; the local mail API answers 502) |
 | Convex unreachable from n8n | HTTP node retries exhausted | error workflow; if Convex is still unreachable, plain-text email to `OPS_EMAIL` | verified manually with Convex stopped (spec §15) |
 | Duplicate delivery (Convex retried after a timeout n8n actually processed) | Remove Duplicates on the event ID | `200 {"duplicate":true}`, no second email | e2e "repeated event ID is a duplicate" |
 | Reminder write-back retried | idempotency key | no duplicate row | `convex/http.test.ts` "write-back is idempotent and only upgrades failed → sent" |
@@ -315,7 +322,7 @@ Each row was exercised by a test or by `pnpm e2e:automation` against the local s
 | Oversized or junk body | 64 KB cap, content type, validators | `413`, `415`, `400` | `http.test.ts` "not configured → 503; wrong content type → 415; oversize → 413; bad body → 400" |
 | Unknown event type reaches n8n | `Compose email` throws | error workflow; never a blank email | `tests/n8n/contract.test.ts` "an unknown event type fails loudly" |
 
-Not covered (see [security.md known limitations](security.md#known-limitations)): an event left in `delivered` because n8n crashed between answering 202 and the write-back, and an email that the SMTP provider accepted and later bounced. Both look healthy to Convex.
+Not covered (see [security.md known limitations](security.md#known-limitations)): an event left in `delivered` because n8n crashed between answering 202 and the write-back, and an email that the mail provider accepted and later bounced. Both look healthy to Convex.
 
 ## Replay
 

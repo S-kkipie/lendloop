@@ -36,7 +36,7 @@ Related: [authorization matrix](authz-matrix.md) (generated), [PII map](pii-map.
 | I4 | The borrower's message reaching others | Shown to the tool owner only (not to admins), never sent to n8n | `summarizeLoan` in `loanAccess.ts`; `loans.queries.test.ts` "… never the message to the borrower"; payload allowlist |
 | I5 | Personal data in n8n | Payload allowlist, built at send time; deleted recipients are skipped | `convex/automation/payloads.ts`; `payloads.test.ts` "payload carries only allowlisted fields", "deleted recipients get no payload" |
 | I6 | Personal data in logs and error messages | `redact()` masks `email`, `name`, `firstName`, `message`, `recipient`, `body` keys and email-shaped strings; stored errors are sanitized and truncated; n8n Code nodes strip emails before reporting | `convex/lib/logger.ts`; `logger.test.ts`; `tests/n8n/contract.test.ts` "Sanitize error: … without emails, truncated" |
-| I7 | Secrets in the repo or exported workflows | n8n credentials hold secrets; workflow JSON has credential references and three placeholders only; gitleaks runs in CI | `tests/n8n/workflows.test.ts` "contains no secrets or credential data", "only allowlisted placeholders"; `.github/workflows/ci.yml` |
+| I7 | Secrets in the repo or exported workflows | n8n credentials hold secrets; workflow JSON has credential references and four placeholders only; gitleaks runs in CI | `tests/n8n/workflows.test.ts` "contains no secrets or credential data", "only allowlisted placeholders"; `.github/workflows/ci.yml` |
 | I8 | A workflow reading the process env (n8n encryption key, DB password) | `N8N_BLOCK_ENV_ACCESS_IN_NODE=true`; Code nodes use no builtins | `docker-compose.yml`; `workflows.test.ts` "Code nodes do not require node builtins"; spec §15 spike |
 | I9 | Admins harvesting emails | Admin user list shows display name and masked email (`m***@example.com`) | `convex/admin.ts`, `maskEmail`; `admin.test.ts` "listUsers masks emails" |
 | I10 | XSS impact, clickjacking, referrer leaks | CSP with `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS in production; React escapes output; plain-text emails | `next.config.ts` (see [CSP and headers](#csp-and-headers)) |
@@ -80,7 +80,7 @@ Resource checks sit on top: owner-only tool edits return `FORBIDDEN` to signed-i
 | `CLERK_WEBHOOK_SIGNING_SECRET` | Convex env (must start with `whsec_`) | Clerk dashboard | [runbook](runbook.md#other-secrets) |
 | `CLERK_SECRET_KEY` | `.env.local`, Vercel env | Clerk dashboard | runbook |
 | `CONVEX_DEPLOY_KEY` | Vercel env (build only) | Convex dashboard | runbook |
-| SMTP password (Resend API key) | n8n credential "LendLoop SMTP" via `SMTP_PASS` | Resend (sending-only key for one domain) | runbook |
+| `MAIL_API_KEY` (Resend API key) | n8n credential "LendLoop Mail API" (Header Auth, `Authorization: Bearer …`) via `MAIL_API_KEY` | `pnpm setup:local` (32 random bytes) locally; Resend (sending-only key for one domain) in production | runbook |
 | `N8N_ENCRYPTION_KEY` | `n8n/.env` (mode 0600), Railway variables | `pnpm setup:local` | see runbook caveat |
 | Postgres password | `n8n/.env`, Railway plugin | `pnpm setup:local`, Railway | Railway |
 | n8n owner password | `n8n/.env` only; the container gets the bcrypt hash | `pnpm setup:local` | rerun setup after deleting it |
@@ -165,7 +165,7 @@ These are true of the code today. Fixes for the ones that matter in production a
 3. **Inbound rate-limit buckets are global.** The HMAC is verified first, so unsigned floods get a 401 without touching the bucket (`convex/http.test.ts` proves 300 unsigned requests do not block a signed one), but there is no per-IP limit in front of Convex; edge rate limiting is a production item.
 4. **The n8n editor is reachable on the same public domain as the webhook** in the demo. It is protected by the env-provisioned owner account with a generated password; MFA is not enforced.
 5. **n8n's dedupe history is capped at 10,000 event IDs** (Remove Duplicates `historySize`, set explicitly). The design notes record that new notifications error once it is full. Ample for a demo; not for production.
-6. **"Sent" means accepted by the SMTP server.** Bounces and complaints are not fed back.
+6. **"Sent" means accepted by the mail API** (Resend in production, the local mail API locally). Bounces and complaints are not fed back.
 7. **No sweeper for stuck events.** An event can stay `delivered` if n8n crashes after answering 202 and before the write-back, or `pending`/`retrying` if a delivery action dies without scheduling its retry. Counts show in the admin console, but nothing flags them.
 8. **Alerts are pull-based.** Dead letters and a stale heartbeat show in the admin console and in structured logs; nobody is paged.
 9. **The overdue query reads the first 200 overdue active loans before skipping those already reminded today**, so with more than 200 overdue loans some would never be reminded. Irrelevant at neighbourhood scale; pagination fixes it.

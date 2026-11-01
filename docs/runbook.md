@@ -82,8 +82,8 @@ To finish a local rotation, delete the `*_PREVIOUS` lines from `n8n/.env`, run `
 | `CLERK_WEBHOOK_SIGNING_SECRET` | Clerk dashboard → Webhooks → endpoint → rotate the signing secret, then set the new `whsec_…` value in Convex. Svix keeps signing with the old secret for a while after rotation, so the switch can be made without dropped events; Clerk retries failed deliveries anyway. |
 | `CLERK_SECRET_KEY` | Create a new secret key in Clerk (API keys), set it in Vercel and redeploy, then delete the old key. |
 | `CONVEX_DEPLOY_KEY` | Generate a new production deploy key in the Convex dashboard, set it in Vercel, revoke the old one. |
-| SMTP password (Resend API key) | Create a new sending-only key for `lendloop.aido.lat`, set `SMTP_PASS` on Railway (redeploy re-imports the SMTP credential), then delete the old key in Resend. |
-| `N8N_ENCRYPTION_KEY` | Do not rotate casually: n8n has no re-encryption command, and losing the key makes stored credentials unreadable. The entrypoint re-imports all three LendLoop credentials from env on every start, but test any change against a copy of the database first. |
+| `MAIL_API_KEY` (Resend API key) | Create a new sending-only key for `lendloop.aido.lat`, set `MAIL_API_KEY` on Railway (redeploy re-imports the "LendLoop Mail API" credential), then delete the old key in Resend. |
+| `N8N_ENCRYPTION_KEY` | Do not rotate casually: n8n has no re-encryption command, and losing the key makes stored credentials unreadable. The entrypoint re-imports all LendLoop credentials from env on every start, but test any change against a copy of the database first. |
 | n8n owner password | Locally: delete `N8N_OWNER_PASSWORD` and `N8N_INSTANCE_OWNER_PASSWORD_HASH` from `n8n/.env`, run `pnpm setup:local` and `pnpm stack:up`. In production: set a new bcrypt hash in `N8N_INSTANCE_OWNER_PASSWORD_HASH` on Railway. |
 
 ## Replay dead letters
@@ -94,7 +94,7 @@ To finish a local rotation, delete the `*_PREVIOUS` lines from `n8n/.env`, run `
    - `n8n responded 401`: signature or secret mismatch. Fix the configuration first ([Requests rejected with 401](#requests-rejected-with-401)), or every replay will die the same way.
    - `n8n responded 5xx`, a timeout or a network error: n8n was down or overloaded. Confirm it is healthy.
    - `N8N_WEBHOOK_URL is not set` or `… shorter than 32 characters`: Convex configuration.
-   - For `failed` events, the matching automation error shows the SMTP message (emails removed).
+   - For `failed` events, the matching automation error shows the mail API's error message, for example Resend's error or an `SMTP 451 …` reply from the local relay (emails removed).
 2. Open the loan's timeline and check that the notification still makes sense. The replay is rebuilt from current data but uses the original event type's wording.
 3. Press **Replay**. The replay is a new event and appears in the outbox as `pending`, then `delivered`, then `sent`. The original row is marked "Replayed … ago".
 4. Do not replay the same event twice unless you know the first replay did not get through: each replay is a new event ID, so a second replay sends a second email. The console asks for confirmation for exactly this reason.
@@ -136,10 +136,10 @@ After fixing, replay the dead events.
 ## An email did not arrive, or bounced
 
 1. Find the loan's timeline. "Queued" means the event is not `sent` yet; check its status in the Automation tab. `skipped` means the recipient's account was deleted or has no email.
-2. `sent` means the SMTP server accepted the message. Check the provider: Mailpit locally; in production the Resend dashboard → Emails, filtered by time (the app never shows full addresses, so search by timestamp and subject).
+2. `sent` means the mail API accepted the message (Resend in production; the local mail API, which relays to Mailpit, locally). Check the provider: Mailpit locally; in production the Resend dashboard → Emails, filtered by time (the app never shows full addresses, so search by timestamp and subject).
 3. Resend shows **Bounced**: the address is wrong or the mailbox is gone, and Resend adds hard bounces to its suppression list. The user fixes their email in Clerk (the `user.updated` webhook and the next sign-in update Convex). A `sent` event cannot be replayed; the next notification goes to the new address.
 4. Resend shows **Delivered** but the user sees nothing: spam folder. Check SPF, DKIM and DMARC for `lendloop.aido.lat` in Resend's domain page.
-5. Resend rejects at SMTP time (unverified domain, invalid key, sending limits): n8n's `Send email` fails after 5 tries, the event becomes `failed` and an automation error appears. Fix the cause, then replay.
+5. Resend's API rejects the request (401 or 403 for an invalid or wrongly scoped key or an unverified domain, 422 for a bad payload, 429 for sending limits): n8n's `Send email` fails after 5 tries, the event becomes `failed` and an automation error appears. Fix the cause, then replay.
 
 ## Run the reminders now
 

@@ -11,7 +11,7 @@ Related: [security known limitations](security.md#known-limitations), [runbook](
 | App | <!-- TODO(live): Vercel production URL --> |
 | Convex health | <!-- TODO(live): https://<deployment>.convex.site/health --> |
 | n8n | <!-- TODO(live): Railway n8n public URL (webhook only; the editor login is private) --> |
-| Email | Resend SMTP, sending domain `lendloop.aido.lat`, from `LendLoop <no-reply@lendloop.aido.lat>` |
+| Email | Resend email API (HTTPS), sending domain `lendloop.aido.lat`, from `LendLoop <no-reply@lendloop.aido.lat>` |
 | Identity | Clerk development instance |
 | Test accounts | An admin and a regular neighbour; credentials are in the submission email, never in the repo |
 
@@ -23,8 +23,8 @@ Related: [security known limitations](security.md#known-limitations), [runbook](
 |---|---|---|
 | Next.js | Vercel, from the GitHub repo | Build command `npx convex deploy --cmd 'pnpm build'` with `CONVEX_DEPLOY_KEY`, so Convex functions and the frontend ship together |
 | Convex | production deployment | Env: `CLERK_JWT_ISSUER_DOMAIN`, `APP_URL` (the Vercel URL), `APP_TIMEZONE`, `N8N_WEBHOOK_URL` (Railway URL + `/webhook/lendloop-loan-events`), `N8N_WEBHOOK_SECRET`, `CONVEX_INBOUND_SECRET`, `CLERK_WEBHOOK_SIGNING_SECRET`. Never `ALLOW_DEV_TOOLS`. |
-| n8n | Railway service built from `n8n/Dockerfile`, Railway Postgres | Same image as local. Variables from `n8n/.env.example` with fresh production secrets, `CONVEX_SITE_URL` = the Convex `.convex.site` URL, `WEBHOOK_URL`, `N8N_EDITOR_BASE_URL`, `N8N_HOST` and `N8N_PROTOCOL` for the public Railway domain, `N8N_PROXY_HOPS=1` (Railway's edge proxy), `N8N_PORT=5678`, and `DB_POSTGRESDB_*` as references to the Postgres service. The hardening settings from [security.md](security.md#n8n-hardening), `DB_TYPE` and `N8N_SECURE_COOKIE=true` come from the image |
-| Email | Resend | SMTP `smtp.resend.com:465`, `SMTP_SECURE=true`, user `resend`, password = a sending-only API key for `lendloop.aido.lat`; SPF and DKIM records in Cloudflare DNS |
+| n8n | Railway service built from `n8n/Dockerfile`, Railway Postgres | Same image as local. Variables from `n8n/.env.example` with fresh production secrets, `CONVEX_SITE_URL` = the Convex `.convex.site` URL, `MAIL_API_URL`, `MAIL_API_KEY`, `MAIL_FROM`, `OPS_EMAIL`, `WEBHOOK_URL`, `N8N_EDITOR_BASE_URL`, `N8N_HOST` and `N8N_PROTOCOL` for the public Railway domain, `N8N_PROXY_HOPS=1` (Railway's edge proxy), `N8N_PORT=5678`, and `DB_POSTGRESDB_*` as references to the Postgres service. The hardening settings from [security.md](security.md#n8n-hardening), `DB_TYPE` and `N8N_SECURE_COOKIE=true` come from the image |
+| Email | Resend | `MAIL_API_URL=https://api.resend.com`, `MAIL_API_KEY` = a sending-only API key restricted to `lendloop.aido.lat`; SPF and DKIM records in Cloudflare DNS. Railway blocks outbound SMTP on the Hobby plan, which is why n8n uses the HTTPS API ([ADR 0011](adr/0011-email-through-resend-api.md)) |
 | Clerk | development instance | Webhook endpoint `<convex site URL>/clerk/webhook` for `user.updated` and `user.deleted` |
 | Demo data | `npx convex run seed:demo --prod` | Fictional neighbours who cannot sign in |
 
@@ -43,7 +43,7 @@ Production secrets are generated for production only (none are shared with the l
 | 7 | [Retention and purge jobs](#retention-and-purge) | everything in Convex is kept forever | small |
 | 8 | [Data export and erasure](#data-subject-rights) | deletion anonymizes; no export | medium |
 | 9 | [Rate-limit tuning and edge protection](#rate-limits-and-edge-protection) | global inbound buckets (signature is checked first); no per-IP edge limit | small |
-| 10 | [Bounce and complaint handling](#email) | "sent" means accepted by SMTP | small |
+| 10 | [Bounce and complaint handling](#email) | "sent" means accepted by Resend's API | small |
 | 11 | [Assurance](#assurance): pentest, E2E in CI, staging | E2E is local only | medium |
 | 12 | [Tenancy](#tenancy) | one neighbourhood | large |
 
@@ -57,7 +57,7 @@ Production secrets are generated for production only (none are shared with the l
 ## Secrets: manager and rotation
 
 - One source of truth (for example Doppler, Infisical, 1Password Secrets Automation or a cloud secret manager) syncing into Vercel, Convex and Railway. Nobody copies secrets between dashboards by hand.
-- Rotation cadence: HMAC secrets every 90 days and immediately on suspected exposure; SMTP key every 90 days; Clerk secret key and webhook secret yearly or on staff change; Convex deploy key on staff change. `N8N_ENCRYPTION_KEY` only with a tested re-encryption plan.
+- Rotation cadence: HMAC secrets every 90 days and immediately on suspected exposure; Resend API key every 90 days; Clerk secret key and webhook secret yearly or on staff change; Convex deploy key on staff change. `N8N_ENCRYPTION_KEY` only with a tested re-encryption plan.
 - Automate the two-phase rotation from the [runbook](runbook.md#rotate-the-hmac-secrets): verifier first (n8n gets new + previous), then signer, then drop the previous secret after the 5-minute window. Locally, `pnpm setup:local --rotate` should restart n8n before pushing the new Convex → n8n secret to close its short gap.
 - Keep gitleaks in CI and add push protection on the repository.
 
@@ -83,7 +83,7 @@ The cheaper alternative, a periodic `clearDeduplicationHistory` with a larger wi
 
 ## n8n operations
 
-- **Queue mode:** `EXECUTIONS_MODE=queue` with Redis, one main instance (editor, schedules) and separate worker processes, plus webhook processors if traffic grows. Concurrency limits per worker so an SMTP slowdown does not pile up executions.
+- **Queue mode:** `EXECUTIONS_MODE=queue` with Redis, one main instance (editor, schedules) and separate worker processes, plus webhook processors if traffic grows. Concurrency limits per worker so a slow email API does not pile up executions.
 - **Backups:** managed Postgres with point-in-time recovery. n8n's state is small (credentials are re-imported from env, workflows come from git), but error executions and the dedupe table live there until item 3 lands.
 - **Editor access:** expose only `/webhook/lendloop-loan-events` publicly (Railway private networking plus a proxy, or Cloudflare Access in front of the editor), and enforce MFA for the n8n owner.
 - **Image:** keep the pinned version, rebuild on n8n security releases, scan the image in CI.

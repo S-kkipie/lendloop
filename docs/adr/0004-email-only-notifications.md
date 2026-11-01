@@ -9,11 +9,11 @@ n8n can post to Slack, Discord, SMS gateways and more. Every notification here i
 
 ## Decision
 
-Email only, one recipient per message. Mailpit (pinned `axllent/mailpit:v1.33.0`) catches mail locally and doubles as a chaos tool for the automation E2E; Resend SMTP on the sending domain `lendloop.aido.lat` delivers in production. Emails are plain text and use first names only.
+Email only, one recipient per message. Mailpit (pinned `axllent/mailpit:v1.33.0`) catches mail locally and doubles as a chaos tool for the automation E2E; the Resend email API on the sending domain `lendloop.aido.lat` delivers in production. The transport changed from SMTP to Resend's HTTPS API in [ADR 0011](0011-email-through-resend-api.md). Emails are plain text and use first names only.
 
 ## Consequences
 
 - A team channel webhook would have broadcast neighbours' loan details to everyone in it; email keeps each message 1:1.
 - Plain text means no tracking pixels and nothing to render unsafely.
-- Delivery is "accepted by SMTP": bounces are not fed back yet ([production.md](../production.md#email)).
+- Delivery is "accepted by the mail API": bounces are not fed back yet ([production.md](../production.md#email)).
 - No notification preferences or other channels (a stated non-goal).

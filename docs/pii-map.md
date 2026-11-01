@@ -45,7 +45,8 @@ Demo data from `pnpm seed` is fictional and those users cannot sign in. Their ad
 |---|---|---|---|---|
 | Clerk | account: email, name, sign-in methods, sessions, IP and device metadata | the user; the Clerk dashboard owner | Clerk's policy, until the user is deleted in Clerk | Deleting the user in Clerk triggers `user.deleted` → anonymization in Convex |
 | n8n (Postgres) | error executions only: the failed run's input, which can include the recipient's email, first names, tool name, dates | the n8n owner | 7 days (`EXECUTIONS_DATA_MAX_AGE=168`), successful runs not stored | Dedupe history holds event IDs only |
-| SMTP provider (Resend in production) | recipient email, subject and body (first names, tool name, dates, a link) | the Resend account owner | Resend's log retention | Sending-only API key scoped to the domain |
+| Email provider (Resend's API in production) | recipient email, subject and body (first names, tool name, dates, a link) | the Resend account owner | Resend's log retention | Sending-only API key scoped to the domain |
+| Local mail API (`mail-api`) | passes each message to Mailpit; keeps idempotency keys and request hashes in memory | nobody | until the container restarts | Local only; stores no message |
 | Mailpit (local) | every email the local stack sends | anyone with access to `localhost:8025` | until the container is recreated | Local only |
 | `OPS_EMAIL` inbox | workflow name, node name, execution ID | operators | the mailbox's | No user data by construction |
 | Convex logs | redacted JSON lines (IDs, statuses, reasons) | deployment admins | Convex's log retention | See [logging](security.md#logging-and-redaction) |
