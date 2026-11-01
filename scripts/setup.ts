@@ -4,7 +4,7 @@
 //   pnpm setup:local            create missing values, keep existing ones
 //   pnpm setup:local --rotate   rotate both HMAC secrets, keeping the old ones as *_PREVIOUS
 // A rotation never breaks deliveries: each verifier learns the new secret
-// before its signer starts using it (see rotateWithRunningN8n).
+// before its signer starts using it (order in scripts/lib/rotation.ts).
 import bcrypt from "bcryptjs";
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -13,6 +13,7 @@ import { createServer } from "node:net";
 import { relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseEnv, randomSecret, serializeEnv } from "./lib/envfile";
+import { rotationPlan } from "./lib/rotation";
 
 const ENV_PATH = fileURLToPath(new URL("../n8n/.env", import.meta.url));
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -69,8 +70,10 @@ function n8nIsRunning(): boolean {
   return result.status === 0 && result.stdout.split("\n").includes("n8n");
 }
 
-// Recreates the n8n container with the new n8n/.env and waits until the webhook
-// workflow is active again (an unsigned request then gets a 401, not a 404).
+// Recreates the n8n container with the new n8n/.env and waits until it is
+// healthy with its workflows published: the entrypoint publishes all of them
+// before `n8n start`, so a 401 (not a 404) to an unsigned webhook call means
+// the whole set is live.
 async function restartN8n(): Promise<boolean> {
   const up = spawnSync("docker", [...COMPOSE, "up", "-d", "n8n"], { cwd: ROOT, stdio: ["ignore", "ignore", "inherit"] });
   if (up.status !== 0) return false;
@@ -84,28 +87,6 @@ async function restartN8n(): Promise<boolean> {
     await new Promise((resolve) => setTimeout(resolve, 2000));
   }
   return false;
-}
-
-// With n8n running, the order matters for both directions:
-//   1. Convex learns the new inbound secret (and keeps the old one as previous),
-//      so the restarted n8n's signatures verify; Convex keeps signing with the
-//      old webhook secret for now.
-//   2. n8n restarts holding the new webhook secret and the old one as previous,
-//      so it accepts whatever Convex signs during and after the switch.
-//   3. Convex starts signing with the new webhook secret.
-async function rotateWithRunningN8n(convexEnv: Map<string, string>, oldWebhookSecret: string): Promise<boolean> {
-  const staged = new Map(convexEnv).set("N8N_WEBHOOK_SECRET", oldWebhookSecret);
-  if (!pushToConvex(staged)) return false;
-  console.log("Convex accepts the new n8n->Convex secret; restarting n8n with the new secrets...");
-  if (!(await restartN8n())) {
-    console.error(
-      "n8n did not come back within 3 minutes. Convex still signs with the previous secret, which n8n accepts:" +
-        " fix n8n (`pnpm stack:up`), then run `pnpm setup:local` to finish the rotation.",
-    );
-    process.exit(1);
-  }
-  console.log("n8n accepts both webhook secrets; switching Convex to the new one.");
-  return pushToConvex(convexEnv);
 }
 
 async function main() {
@@ -167,9 +148,31 @@ async function main() {
     const previous = env.get(`${n8nKey}_PREVIOUS`);
     if (previous) convexEnv.set(`${convexKey}_PREVIOUS`, previous);
   }
-  const oldWebhookSecret = env.get("LENDLOOP_N8N_WEBHOOK_SECRET_PREVIOUS");
-  const staged = rotated.includes("LENDLOOP_N8N_WEBHOOK_SECRET") && oldWebhookSecret !== undefined && n8nIsRunning();
-  const pushed = staged ? await rotateWithRunningN8n(convexEnv, oldWebhookSecret) : pushToConvex(convexEnv);
+  // n8n/.env is already written; Convex is updated last (around an n8n restart).
+  const webhookSecretRotated = rotated.includes("LENDLOOP_N8N_WEBHOOK_SECRET");
+  const n8nRunning = webhookSecretRotated && n8nIsRunning();
+  const plan = rotationPlan(convexEnv, {
+    webhookSecretRotated,
+    oldWebhookSecret: env.get("LENDLOOP_N8N_WEBHOOK_SECRET_PREVIOUS"),
+    n8nRunning,
+  });
+  let pushed = true;
+  for (const step of plan) {
+    if (step.kind === "convex") {
+      pushed = pushToConvex(step.values);
+      if (!pushed) break;
+      continue;
+    }
+    console.log("Convex accepts the new n8n->Convex secret; restarting n8n with the new secrets...");
+    if (!(await restartN8n())) {
+      console.error(
+        "n8n did not come back with its workflows published within 3 minutes. Convex still signs with the" +
+          " previous secret, which n8n accepts: fix n8n (`pnpm stack:up`), then run `pnpm setup:local` to finish.",
+      );
+      process.exit(1);
+    }
+    console.log("n8n is healthy and accepts both webhook secrets; switching Convex to the new one.");
+  }
 
   const file = relative(process.cwd(), ENV_PATH);
   if (created.length) console.log(`Created or updated: ${created.join(", ")}`);
@@ -181,7 +184,12 @@ async function main() {
     console.error("Could not update the Convex deployment. Start it with `pnpm dev:convex` and rerun `pnpm setup:local`.");
     process.exit(1);
   }
-  if (rotated.length && !staged) console.log("Start n8n (`pnpm stack:up`) so it picks up the rotated secrets.");
+  if (webhookSecretRotated && !n8nRunning) {
+    console.log(
+      "n8n is not running. Start it (`pnpm stack:up`) before anything else: it then holds the new secrets and still" +
+        " accepts the previous ones. Until it is up, Convex deliveries wait in the outbox and retry.",
+    );
+  }
 }
 
 main().catch((error: unknown) => {
